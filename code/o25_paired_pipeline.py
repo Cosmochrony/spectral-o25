@@ -343,10 +343,11 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
 
     if verbose:
         n_valid = np.sum(np.isfinite(delta_pair_mean))
-        print(f"  q={q}: delta_pair(global)={delta_global:.4f}, R2={r2_global:.4f}  "
-              f"mean(pairs)={np.nanmean(delta_pair_mean):.4f} "
+        print(f"  q={q}: delta_pair(mean/pairs)={np.nanmean(delta_pair_mean):.4f} "
               f"+/- {np.nanstd(delta_pair_mean):.4f}  "
-              f"({n_valid}/{n_pairs} valid pairs)  time={dt:.1f}s")
+              f"({n_valid}/{n_pairs} valid pairs)  "
+              f"[global={delta_global:.4f}, R2={r2_global:.4f}]  "
+              f"time={dt:.1f}s")
 
     return dict(
         q=q, seed=seed, M_per_pair=M,
@@ -408,8 +409,8 @@ def verify_npz(path):
     np_ = int(z["pairs"].shape[0])
     M  = int(z["M_per_pair"])
     print(f"  [verify] q={q}  n_pairs={np_}  M={M}  window=[{n0},{n1}]  "
-          f"delta_pair(global)={dg:.4f}  R2={r2:.4f}  "
-          f"mean(pairs)={dm:.4f}+/-{ds:.4f}")
+          f"delta_pair(mean/pairs)={dm:.4f}+/-{ds:.4f}  "
+          f"[global={dg:.4f}, R2={r2:.4f}]")
 
 
 # ============================================================
@@ -504,12 +505,10 @@ def main():
     print("=" * 74)
     print("SUMMARY")
     print("=" * 74)
-    print(f"{'q':>6}  {'delta(global)':>14}  {'R2':>8}  "
-          f"{'mean(pairs)':>12}  {'std':>8}  {'window':>10}")
+    print(f"{'q':>6}  {'mean(pairs)':>12}  {'std':>8}  {'global':>10}  {'R2':>8}  {'window':>10}")
     print("-" * 74)
     for q, dg, r2, dm, ds, n0, n1 in summary:
-        print(f"{q:>6}  {dg:>14.4f}  {r2:>8.4f}  "
-              f"{dm:>12.4f}  {ds:>8.4f}  [{n0},{n1}]")
+        print(f"{q:>6}  {dm:>12.4f}  {ds:>8.4f}  {dg:>10.4f}  {r2:>8.4f}  [{n0},{n1}]")
     print("=" * 74)
     print(f"Total time: {total_dt:.1f}s")
     print()
