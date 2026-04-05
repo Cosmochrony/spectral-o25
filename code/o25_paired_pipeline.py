@@ -62,9 +62,13 @@ import argparse
 import pathlib
 import sys
 import time
+import os
+import traceback
 
 import numpy as np
 from joblib import Parallel, delayed
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from spectral_O12 import (
@@ -73,8 +77,9 @@ try:
         compute_block_capacity,
         find_fitting_window,
     )
-except ImportError:
-    print("ERROR: spectral_O12.py not found.  Place it in the same directory.")
+except Exception as e:
+    print(f"ERROR importing spectral_O12: {e}", file=sys.stderr)
+    traceback.print_exc()
     sys.exit(1)
 
 
