@@ -64,12 +64,14 @@ import sys
 import time
 
 import numpy as np
+from joblib import Parallel, delayed
 
 try:
     from spectral_O12 import (
         build_generators,
         bfs_shells,
         compute_block_capacity,
+        find_fitting_window,
     )
 except ImportError:
     print("ERROR: spectral_O12.py not found.  Place it in the same directory.")
@@ -124,6 +126,11 @@ N_MAX_FALLBACK = 60
 
 DEFAULT_SEED  = 42
 OUTPUT_DIR    = pathlib.Path("o25_outputs")
+
+# Number of parallel workers for the pair loop.
+# -1 = use all available CPU cores (recommended on multi-core machines).
+# 1  = sequential (original behaviour, useful for debugging).
+N_JOBS_DEFAULT = -1
 
 # Minimum sigma_pair value to include in the log-log fit (avoid numerical noise)
 EPS_PAIR = 1e-15
@@ -183,9 +190,45 @@ def fit_delta_pair(sigma_pair, ns, n0, n1):
 # MAIN COMPUTATION: ONE PRIME
 # ============================================================
 
+def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
+                      n0, n1, M, base_seed):
+    """
+    Compute M samples of sigma_pair for the conjugate pair (c, q-c).
+    Called in parallel by run_one_prime; must be a module-level function
+    (required by multiprocessing pickling).
+
+    Uses a per-pair seed derived from base_seed so results are reproducible
+    regardless of the number of workers.
+    """
+    rng = np.random.default_rng(base_seed + idx * 997 + c * 7)
+    n_shells = len(shells)
+    sp_accumulator = np.zeros(n_shells)
+    delta_arr = np.full(M, np.nan)
+    r2_arr    = np.full(M, np.nan)
+
+    for m in range(M):
+        cb_c  = sample_block_with_c1(c,  q, rng)
+        cb_qc = sample_block_with_c1(qc, q, rng)
+
+        sv_c,  _, _, _ = compute_block_capacity(
+            shells, cb_c,  q, gens, n_max=n_max_block)
+        sv_qc, _, _, _ = compute_block_capacity(
+            shells, cb_qc, q, gens, n_max=n_max_block)
+
+        n_sh = min(len(sv_c), len(sv_qc))
+        sp   = sv_c[:n_sh] * sv_qc[:n_sh]
+        sp_accumulator[:n_sh] += sp
+
+        d, r2 = fit_delta_pair(sp, ns, n0, min(n1, n_sh - 1))
+        delta_arr[m] = d
+        r2_arr[m]    = r2
+
+    return idx, sp_accumulator / M, delta_arr, r2_arr
+
+
 def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                   bfs_frac=None, n_max_block=None, n0=None, n1=None,
-                  verbose=True):
+                  n_jobs=N_JOBS_DEFAULT, auto_window=False, verbose=True):
     """
     O25 computation for prime q: all (q-1)//2 conjugate pairs, M samples each.
 
@@ -193,10 +236,13 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     ----------
     q            : prime
     M            : samples per pair
-    seed         : RNG seed
+    seed         : RNG seed (each pair gets a deterministic derived seed)
     bfs_frac     : BFS fraction (default from BFS_FRAC table)
     n_max_block  : n_max per block (default from N_MAX_BLOCK table)
     n0, n1       : fitting window (default from WINDOW_O12 table)
+    n_jobs       : parallel workers (-1 = all cores, 1 = sequential)
+    auto_window  : if True, calibrate [n0,n1] from actual sigma_bar after BFS,
+                   ignoring WINDOW_O12 table (use with --bfs-frac 0.99)
     verbose      : print progress
 
     Returns
@@ -205,12 +251,13 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     """
     if bfs_frac    is None: bfs_frac    = BFS_FRAC.get(q, BFS_FRAC_FALLBACK)
     if n_max_block is None: n_max_block = N_MAX_BLOCK.get(q, N_MAX_FALLBACK)
-    if n0 is None or n1 is None:
-        win = WINDOW_O12.get(q, (2, 10))
-        n0, n1 = win
+    # Window: use WINDOW_O12 table if available and auto_window not requested,
+    # otherwise calibrate from the actual sigma_bar after BFS (find_fitting_window).
+    use_table_window = (not auto_window) and (q in WINDOW_O12)
+    if use_table_window:
+        n0, n1 = WINDOW_O12[q]
 
-    t0  = time.perf_counter()
-    rng = np.random.default_rng(seed)
+    t0   = time.perf_counter()
 
     if verbose:
         print(f"  q={q}: BFS (frac={bfs_frac}, n_max_block={n_max_block})...")
@@ -221,8 +268,38 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     shell_sizes = np.array([len(s) for s in shells], dtype=np.int64)
 
     if verbose:
-        print(f"  q={q}: {len(shells)} shells, |G_q_partial|={shell_sizes.sum()}, "
-              f"window=[{n0},{n1}]")
+        print(f"  q={q}: {len(shells)} shells, |G_q_partial|={shell_sizes.sum()}")
+
+    # Window calibration
+    if not use_table_window:
+        # Estimate sigma_bar from a small probe sample (5 random blocks)
+        # to feed find_fitting_window, without running the full M*n_pairs jobs.
+        probe_rng = np.random.default_rng(seed + 999999)
+        probe_sigmas = []
+        probe_gens = build_generators(q)
+        for _ in range(5):
+            c_probe = int(probe_rng.integers(1, q))
+            c2 = int(probe_rng.integers(1, q))
+            c3 = int(probe_rng.integers(1, q))
+            while (c_probe + c2 + c3) % q == 0:
+                c3 = int(probe_rng.integers(1, q))
+            cb = np.array([c_probe, c2, c3], dtype=np.int64)
+            sv, _, _, _ = compute_block_capacity(
+                shells, cb, q, probe_gens, n_max=n_max_block)
+            pad = len(shells) - len(sv)
+            if pad > 0:
+                sv = np.concatenate([sv, np.zeros(pad)])
+            probe_sigmas.append(sv[:len(shells)])
+        sigma_bar_probe = np.mean(probe_sigmas, axis=0)
+        n0, n1 = find_fitting_window(ns[1:], sigma_bar_probe[1:], q)
+        n0 = max(n0, 1)
+        n1 = min(n1, len(shells) - 1)
+        if verbose:
+            print(f"  q={q}: auto-calibrated window=[{n0},{n1}]"
+                  f" (from {len(shells)} shells, bfs_frac={bfs_frac})")
+    else:
+        if verbose:
+            print(f"  q={q}: window=[{n0},{n1}] (from WINDOW_O12 table)")
 
     # All conjugate pairs c in {1, ..., (q-1)//2}
     pairs     = [(c, q - c) for c in range(1, (q - 1) // 2 + 1)]
@@ -230,38 +307,28 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     pairs_arr = np.array(pairs, dtype=np.int64)
 
     if verbose:
-        print(f"  q={q}: {n_pairs} pairs x M={M} samples...")
+        import os
+        n_cores = os.cpu_count() if n_jobs == -1 else n_jobs
+        print(f"  q={q}: {n_pairs} pairs x M={M} samples  "
+              f"(n_jobs={n_jobs}, ~{n_cores} workers)...")
 
-    # Storage: sigma_pair_mean[pair, shell], delta per sample
-    sigma_pair_mean  = np.zeros((n_pairs, len(shells)))
-    delta_samples    = np.full((n_pairs, M), np.nan)
-    r2_samples       = np.full((n_pairs, M), np.nan)
+    # Parallel computation: each pair is independent (O24 verticality)
+    job_results = Parallel(n_jobs=n_jobs, prefer="processes", verbose=0)(
+        delayed(_compute_one_pair)(
+            idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
+        )
+        for idx, (c, qc) in enumerate(pairs)
+    )
 
-    for idx, (c, qc) in enumerate(pairs):
-        sp_accumulator = np.zeros(len(shells))
-        for m in range(M):
-            cb_c  = sample_block_with_c1(c,  q, rng)
-            cb_qc = sample_block_with_c1(qc, q, rng)
+    # Reassemble results (order may differ from submission order)
+    sigma_pair_mean = np.zeros((n_pairs, len(shells)))
+    delta_samples   = np.full((n_pairs, M), np.nan)
+    r2_samples      = np.full((n_pairs, M), np.nan)
 
-            sv_c,  _, _, _ = compute_block_capacity(
-                shells, cb_c,  q, gens, n_max=n_max_block)
-            sv_qc, _, _, _ = compute_block_capacity(
-                shells, cb_qc, q, gens, n_max=n_max_block)
-
-            n_sh = min(len(sv_c), len(sv_qc))
-            sp   = sv_c[:n_sh] * sv_qc[:n_sh]
-            sp_accumulator[:n_sh] += sp
-
-            d, r2 = fit_delta_pair(sp, ns, n0, min(n1, n_sh - 1))
-            delta_samples[idx, m] = d
-            r2_samples[idx, m]    = r2
-
-        sigma_pair_mean[idx] = sp_accumulator / M
-
-        if verbose and (idx + 1) % max(1, n_pairs // 5) == 0:
-            dm = np.nanmean(delta_samples[idx])
-            print(f"    pair {idx+1}/{n_pairs}: ({c},{qc})  "
-                  f"delta_pair(mean)={dm:.3f}")
+    for idx, sp_mean, d_arr, r2_arr in job_results:
+        sigma_pair_mean[idx] = sp_mean
+        delta_samples[idx]   = d_arr
+        r2_samples[idx]      = r2_arr
 
     # Per-pair statistics
     delta_pair_mean = np.nanmean(delta_samples, axis=1)
@@ -370,6 +437,11 @@ def main():
                         help="BFS fraction (overrides table)")
     parser.add_argument("--n-max",       type=int,   default=None,
                         help="n_max per block (overrides table)")
+    parser.add_argument("--n-jobs",      type=int,   default=N_JOBS_DEFAULT,
+                        help=f"Parallel workers (-1=all cores, default: {N_JOBS_DEFAULT})")
+    parser.add_argument("--auto-window", action="store_true",
+                        help="Calibrate [n0,n1] from actual BFS data "
+                             "(required when --bfs-frac overrides the table)")
     parser.add_argument("--force",       action="store_true",
                         help="Recompute even if output exists")
     args = parser.parse_args()
@@ -380,6 +452,9 @@ def main():
     print("======================")
     print(f"Primes     : {args.primes}")
     print(f"M per pair : {args.M}")
+    print(f"n_jobs     : {args.n_jobs}")
+    print(f"bfs_frac   : {args.bfs_frac if args.bfs_frac else 'from table'}")
+    print(f"window     : {'auto-calibrate' if args.auto_window else 'from WINDOW_O12 table'}")
     print(f"Seed       : {args.seed}")
     print(f"Output dir : {args.out_dir}")
     print()
@@ -409,6 +484,8 @@ def main():
             q=q, M=args.M, seed=args.seed,
             bfs_frac=args.bfs_frac,
             n_max_block=args.n_max,
+            n_jobs=args.n_jobs,
+            auto_window=args.auto_window,
             verbose=True,
         )
         save_npz(res, out_path)
