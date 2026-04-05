@@ -1,0 +1,443 @@
+"""
+o25_paired_pipeline.py
+======================
+O25 numerical campaign: systematic delta_pair computation across all
+conjugate pairs (c, q-c) and all target primes q.
+
+GROUNDING IN THE O-SERIES
+--------------------------
+Every design decision traces to a specific paper:
+
+Observable (O12, spectral_O12.py line 288):
+    sigma_c(n) = delta_r_n / |S_n|
+where delta_r_n is the number of Weil fingerprint vectors in shell S_n
+that are NEW (linearly independent of the Gram-Schmidt span built over
+shells 0,...,n-1).  This is the exact observable computed by
+compute_block_capacity() in spectral_O12.py.
+
+Block parameterisation (O12):
+    c_block = (c1, c2, c3) in (Z/qZ)^3, all nonzero, c1+c2+c3 != 0 (mod q).
+    c1 is the central character; c2, c3 are sampled independently.
+    Two blocks with the same c1 = c yield different sigma_c values
+    (different amplitude factor r(c,q) from O17/O19), but the same
+    asymptotic exponent delta_c (O17 Corollary 2.3).
+
+Pair observable (O16):
+    sigma_pair(n) = sigma_c(n) * sigma_{q-c}(n)
+Two blocks are drawn independently for c and q-c, with c1=c and c1=q-c
+respectively, reproducing the O16 protocol.
+
+Regression convention (O16_pair_observable.py, function fit_delta):
+    log(sigma_pair) = -delta_pair * log(n+1) + const
+The +1 shift is the convention used throughout O16, which produces the
+published value delta_pair ~ 7.44 for the target pairs at q in {29, 61}.
+
+Fitting window (O12, stored in q<q>_o12.npz):
+    [n0, n1] as determined by find_fitting_window() in spectral_O12.py.
+    Values: {29:(2,5), 61:(2,7), 101:(3,10), 151:(3,12), 211:(3,13)}.
+
+WHAT O25 ADDS
+-------------
+O16 computed sigma_pair for one specific pair per prime (where two
+blocks with conjugate c1 happened to appear in the O12 sample).
+O25 computes sigma_pair for ALL (q-1)/2 conjugate pairs, with M
+independent block samples per pair, giving:
+  - the full distribution of delta_pair across pairs and blocks
+  - the mean and inter-pair variance
+  - the scaling law delta_pair(q) as a function of q
+
+USAGE
+-----
+python o25_paired_pipeline.py                   # all default primes
+python o25_paired_pipeline.py --primes 101 151 211
+python o25_paired_pipeline.py --primes 307 --M 20 --n-max 70
+python o25_paired_pipeline.py --primes 61 --M 50 --force
+
+REQUIRES
+--------
+spectral_O12.py in the same directory (or on PYTHONPATH).
+"""
+
+import argparse
+import pathlib
+import sys
+import time
+
+import numpy as np
+
+try:
+    from spectral_O12 import (
+        build_generators,
+        bfs_shells,
+        compute_block_capacity,
+    )
+except ImportError:
+    print("ERROR: spectral_O12.py not found.  Place it in the same directory.")
+    sys.exit(1)
+
+
+# ============================================================
+# PARAMETERS (all at top for reproducibility)
+# ============================================================
+
+DEFAULT_PRIMES = [29, 61, 101, 151, 211]
+
+# M_PER_PAIR: number of independent block samples per conjugate pair (c, q-c).
+# Each sample draws independent (c2,c3) for c and independent (c2',c3') for q-c,
+# reproducing the O16 protocol.  M=20 gives a stable mean; M=50 for publication.
+M_PER_PAIR_DEFAULT = 20
+
+# Fitting windows from O12 npz files (find_fitting_window in spectral_O12.py).
+# These reproduce the exact windows used in O12/O13/O16.
+WINDOW_O12 = {
+    29:  (2,  5),
+    61:  (2,  7),
+    101: (3, 10),
+    151: (3, 12),
+    211: (3, 13),
+}
+
+# BFS fraction: stop BFS at max_fraction * q^3 nodes.
+# For small q: 0.99 (full graph).  For larger q: reduce to limit memory/time.
+BFS_FRAC = {
+    29:  0.99,
+    61:  0.99,
+    101: 0.99,
+    151: 0.29,
+    211: 0.11,
+    307: 0.08,
+    401: 0.05,
+}
+BFS_FRAC_FALLBACK = 0.05
+
+# n_max cap on BFS depth per block (from O12 paper params).
+N_MAX_BLOCK = {
+    29:   8,
+    61:  10,
+    101: 20,
+    151: 37,
+    211: 50,
+    307: 70,
+    401: 80,
+}
+N_MAX_FALLBACK = 60
+
+DEFAULT_SEED  = 42
+OUTPUT_DIR    = pathlib.Path("o25_outputs")
+
+# Minimum sigma_pair value to include in the log-log fit (avoid numerical noise)
+EPS_PAIR = 1e-15
+
+
+# ============================================================
+# BLOCK SAMPLING WITH FIXED c1
+# ============================================================
+
+def sample_block_with_c1(c1, q, rng, max_attempts=2000):
+    """
+    Sample a generic block (c1, c2, c3) with c1 fixed and c2, c3 random.
+    Generic condition: all ci != 0 and c1+c2+c3 != 0 (mod q).
+    """
+    for _ in range(max_attempts):
+        c2 = int(rng.integers(1, q))
+        c3 = int(rng.integers(1, q))
+        if (c1 + c2 + c3) % q != 0:
+            return np.array([c1, c2, c3], dtype=np.int64)
+    raise RuntimeError(f"Cannot sample generic block with c1={c1}, q={q}")
+
+
+# ============================================================
+# FITTING: O16 CONVENTION log(n+1)
+# ============================================================
+
+def fit_delta_pair(sigma_pair, ns, n0, n1):
+    """
+    OLS fit: log(sigma_pair) = -delta_pair * log(n+1) + const
+    on window [n0, n1], skipping values below EPS_PAIR.
+
+    This is the exact convention of O16_pair_observable.py (function fit_delta),
+    which uses np.log(nf[mask] + 1) rather than np.log(nf[mask]).
+    The +1 shift is responsible for the published delta_pair ~ 7.44 at q in {29,61}.
+
+    Returns (delta_pair, R2) or (nan, nan) if fewer than 2 valid points.
+    """
+    n_arr = ns[n0:n1+1].astype(float)
+    s_arr = sigma_pair[n0:min(n1+1, len(sigma_pair))]
+    # Pad with zeros if sigma_pair is shorter than the window
+    if len(s_arr) < len(n_arr):
+        s_arr = np.concatenate([s_arr, np.zeros(len(n_arr) - len(s_arr))])
+    mask = (n_arr > 0) & (s_arr > EPS_PAIR)
+    if mask.sum() < 2:
+        return np.nan, np.nan
+    log_n = np.log(n_arr[mask] + 1)
+    log_s = np.log(s_arr[mask])
+    coef  = np.polyfit(log_n, log_s, 1)
+    resid = log_s - np.polyval(coef, log_n)
+    ss_res = np.sum(resid ** 2)
+    ss_tot = np.sum((log_s - log_s.mean()) ** 2)
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 1e-15 else np.nan
+    return float(-coef[0]), float(r2)
+
+
+# ============================================================
+# MAIN COMPUTATION: ONE PRIME
+# ============================================================
+
+def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
+                  bfs_frac=None, n_max_block=None, n0=None, n1=None,
+                  verbose=True):
+    """
+    O25 computation for prime q: all (q-1)//2 conjugate pairs, M samples each.
+
+    Parameters
+    ----------
+    q            : prime
+    M            : samples per pair
+    seed         : RNG seed
+    bfs_frac     : BFS fraction (default from BFS_FRAC table)
+    n_max_block  : n_max per block (default from N_MAX_BLOCK table)
+    n0, n1       : fitting window (default from WINDOW_O12 table)
+    verbose      : print progress
+
+    Returns
+    -------
+    dict with all results (see save_npz for the stored fields)
+    """
+    if bfs_frac    is None: bfs_frac    = BFS_FRAC.get(q, BFS_FRAC_FALLBACK)
+    if n_max_block is None: n_max_block = N_MAX_BLOCK.get(q, N_MAX_FALLBACK)
+    if n0 is None or n1 is None:
+        win = WINDOW_O12.get(q, (2, 10))
+        n0, n1 = win
+
+    t0  = time.perf_counter()
+    rng = np.random.default_rng(seed)
+
+    if verbose:
+        print(f"  q={q}: BFS (frac={bfs_frac}, n_max_block={n_max_block})...")
+
+    gens   = build_generators(q)
+    shells = bfs_shells(None, None, gens, q, bfs_frac)
+    ns     = np.arange(len(shells), dtype=np.int64)
+    shell_sizes = np.array([len(s) for s in shells], dtype=np.int64)
+
+    if verbose:
+        print(f"  q={q}: {len(shells)} shells, |G_q_partial|={shell_sizes.sum()}, "
+              f"window=[{n0},{n1}]")
+
+    # All conjugate pairs c in {1, ..., (q-1)//2}
+    pairs     = [(c, q - c) for c in range(1, (q - 1) // 2 + 1)]
+    n_pairs   = len(pairs)
+    pairs_arr = np.array(pairs, dtype=np.int64)
+
+    if verbose:
+        print(f"  q={q}: {n_pairs} pairs x M={M} samples...")
+
+    # Storage: sigma_pair_mean[pair, shell], delta per sample
+    sigma_pair_mean  = np.zeros((n_pairs, len(shells)))
+    delta_samples    = np.full((n_pairs, M), np.nan)
+    r2_samples       = np.full((n_pairs, M), np.nan)
+
+    for idx, (c, qc) in enumerate(pairs):
+        sp_accumulator = np.zeros(len(shells))
+        for m in range(M):
+            cb_c  = sample_block_with_c1(c,  q, rng)
+            cb_qc = sample_block_with_c1(qc, q, rng)
+
+            sv_c,  _, _, _ = compute_block_capacity(
+                shells, cb_c,  q, gens, n_max=n_max_block)
+            sv_qc, _, _, _ = compute_block_capacity(
+                shells, cb_qc, q, gens, n_max=n_max_block)
+
+            n_sh = min(len(sv_c), len(sv_qc))
+            sp   = sv_c[:n_sh] * sv_qc[:n_sh]
+            sp_accumulator[:n_sh] += sp
+
+            d, r2 = fit_delta_pair(sp, ns, n0, min(n1, n_sh - 1))
+            delta_samples[idx, m] = d
+            r2_samples[idx, m]    = r2
+
+        sigma_pair_mean[idx] = sp_accumulator / M
+
+        if verbose and (idx + 1) % max(1, n_pairs // 5) == 0:
+            dm = np.nanmean(delta_samples[idx])
+            print(f"    pair {idx+1}/{n_pairs}: ({c},{qc})  "
+                  f"delta_pair(mean)={dm:.3f}")
+
+    # Per-pair statistics
+    delta_pair_mean = np.nanmean(delta_samples, axis=1)
+    delta_pair_std  = np.nanstd(delta_samples,  axis=1)
+    r2_mean         = np.nanmean(r2_samples,    axis=1)
+
+    # Global delta_pair: fit on grand mean sigma_pair across all pairs
+    grand_mean = np.mean(sigma_pair_mean, axis=0)
+    delta_global, r2_global = fit_delta_pair(grand_mean, ns, n0, n1)
+
+    dt = time.perf_counter() - t0
+
+    if verbose:
+        n_valid = np.sum(np.isfinite(delta_pair_mean))
+        print(f"  q={q}: delta_pair(global)={delta_global:.4f}, R2={r2_global:.4f}  "
+              f"mean(pairs)={np.nanmean(delta_pair_mean):.4f} "
+              f"+/- {np.nanstd(delta_pair_mean):.4f}  "
+              f"({n_valid}/{n_pairs} valid pairs)  time={dt:.1f}s")
+
+    return dict(
+        q=q, seed=seed, M_per_pair=M,
+        bfs_frac=bfs_frac, n_max_block=n_max_block,
+        pairs=pairs_arr,
+        ns=ns, shell_sizes=shell_sizes,
+        n0=n0, n1=n1,
+        sigma_pair_mean=sigma_pair_mean,
+        delta_pair_samples=delta_samples,
+        delta_pair_mean=delta_pair_mean,
+        delta_pair_std=delta_pair_std,
+        r2_mean=r2_mean,
+        delta_pair_global=delta_global,
+        r2_global=r2_global,
+        wall_time_s=dt,
+    )
+
+
+# ============================================================
+# SAVE / LOAD
+# ============================================================
+
+def save_npz(res, out_path):
+    """Save result dict to .npz checkpoint."""
+    np.savez(
+        out_path,
+        q                  = np.int64(res["q"]),
+        seed               = np.int64(res["seed"]),
+        M_per_pair         = np.int64(res["M_per_pair"]),
+        bfs_frac           = np.float64(res["bfs_frac"]),
+        n_max_block        = np.int64(res["n_max_block"]),
+        pairs              = res["pairs"].astype(np.int64),
+        ns                 = res["ns"].astype(np.int64),
+        shell_sizes        = res["shell_sizes"].astype(np.int64),
+        n0                 = np.int64(res["n0"]),
+        n1                 = np.int64(res["n1"]),
+        sigma_pair_mean    = res["sigma_pair_mean"].astype(np.float64),
+        delta_pair_samples = res["delta_pair_samples"].astype(np.float64),
+        delta_pair_mean    = res["delta_pair_mean"].astype(np.float64),
+        delta_pair_std     = res["delta_pair_std"].astype(np.float64),
+        r2_mean            = res["r2_mean"].astype(np.float64),
+        delta_pair_global  = np.float64(res["delta_pair_global"]),
+        r2_global          = np.float64(res["r2_global"]),
+        wall_time_s        = np.float64(res["wall_time_s"]),
+    )
+    print(f"  Saved: {out_path}")
+
+
+def verify_npz(path):
+    """Quick sanity check: load and print key results."""
+    z  = np.load(path)
+    q  = int(z["q"])
+    n0 = int(z["n0"])
+    n1 = int(z["n1"])
+    dg = float(z["delta_pair_global"])
+    r2 = float(z["r2_global"])
+    dm = float(np.nanmean(z["delta_pair_mean"]))
+    ds = float(np.nanstd(z["delta_pair_mean"]))
+    np_ = int(z["pairs"].shape[0])
+    M  = int(z["M_per_pair"])
+    print(f"  [verify] q={q}  n_pairs={np_}  M={M}  window=[{n0},{n1}]  "
+          f"delta_pair(global)={dg:.4f}  R2={r2:.4f}  "
+          f"mean(pairs)={dm:.4f}+/-{ds:.4f}")
+
+
+# ============================================================
+# CLI
+# ============================================================
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="O25: systematic delta_pair across all pairs and primes"
+    )
+    parser.add_argument(
+        "--primes", type=int, nargs="+",
+        default=DEFAULT_PRIMES,
+        help=f"Primes to compute (default: {DEFAULT_PRIMES})"
+    )
+    parser.add_argument(
+        "--M", type=int, default=M_PER_PAIR_DEFAULT,
+        help=f"Samples per pair (default: {M_PER_PAIR_DEFAULT})"
+    )
+    parser.add_argument(
+        "--out-dir", type=pathlib.Path, default=OUTPUT_DIR,
+    )
+    parser.add_argument("--seed",        type=int,   default=DEFAULT_SEED)
+    parser.add_argument("--bfs-frac",    type=float, default=None,
+                        help="BFS fraction (overrides table)")
+    parser.add_argument("--n-max",       type=int,   default=None,
+                        help="n_max per block (overrides table)")
+    parser.add_argument("--force",       action="store_true",
+                        help="Recompute even if output exists")
+    args = parser.parse_args()
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
+
+    print("o25_paired_pipeline.py")
+    print("======================")
+    print(f"Primes     : {args.primes}")
+    print(f"M per pair : {args.M}")
+    print(f"Seed       : {args.seed}")
+    print(f"Output dir : {args.out_dir}")
+    print()
+
+    total_t0 = time.perf_counter()
+    summary  = []
+
+    for q in sorted(set(args.primes)):
+        out_path = args.out_dir / f"q{q}_o25.npz"
+        print(f"--- q={q} ---")
+
+        if out_path.exists() and not args.force:
+            print(f"  Exists: {out_path}  (--force to recompute)")
+            verify_npz(out_path)
+            z = np.load(out_path)
+            summary.append((
+                q,
+                float(z["delta_pair_global"]), float(z["r2_global"]),
+                float(np.nanmean(z["delta_pair_mean"])),
+                float(np.nanstd(z["delta_pair_mean"])),
+                int(z["n0"]), int(z["n1"]),
+            ))
+            print()
+            continue
+
+        res = run_one_prime(
+            q=q, M=args.M, seed=args.seed,
+            bfs_frac=args.bfs_frac,
+            n_max_block=args.n_max,
+            verbose=True,
+        )
+        save_npz(res, out_path)
+        verify_npz(out_path)
+        summary.append((
+            q,
+            res["delta_pair_global"], res["r2_global"],
+            float(np.nanmean(res["delta_pair_mean"])),
+            float(np.nanstd(res["delta_pair_mean"])),
+            res["n0"], res["n1"],
+        ))
+        print()
+
+    total_dt = time.perf_counter() - total_t0
+
+    print("=" * 74)
+    print("SUMMARY")
+    print("=" * 74)
+    print(f"{'q':>6}  {'delta(global)':>14}  {'R2':>8}  "
+          f"{'mean(pairs)':>12}  {'std':>8}  {'window':>10}")
+    print("-" * 74)
+    for q, dg, r2, dm, ds, n0, n1 in summary:
+        print(f"{q:>6}  {dg:>14.4f}  {r2:>8.4f}  "
+              f"{dm:>12.4f}  {ds:>8.4f}  [{n0},{n1}]")
+    print("=" * 74)
+    print(f"Total time: {total_dt:.1f}s")
+    print()
+    print("Next: python o25_analysis.py  (figures and scaling law)")
+
+
+if __name__ == "__main__":
+    main()
