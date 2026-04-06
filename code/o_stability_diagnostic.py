@@ -50,27 +50,23 @@ N_BURN_IN = 2
 def load_pair_data(npz_path: Path) -> dict:
     """Load the npz file produced by o25_paired_pipeline.py.
 
-    Expected keys (subset used here):
-        sigma_pair_mean  : array of shape (n_depths,)  -- mean over pairs
-        sigma_pair_all   : array of shape (n_pairs, n_depths)  -- per-pair
-        depths           : array of shape (n_depths,)  -- BFS depth n
-        pairs            : array of shape (n_pairs, 2)  -- (c, q-c) indices
-        q                : int
-    Falls back gracefully if sigma_pair_all is absent.
+    Actual keys used:
+        q                : scalar int
+        ns               : (n_depths,)         -- BFS depths
+        pairs            : (n_pairs, 2)         -- (c, q-c) indices
+        sigma_pair_mean  : (n_pairs, n_depths)  -- per-pair sigma traces
+        n0, n1           : scalar ints          -- fitting window bounds
     """
     data = np.load(npz_path, allow_pickle=True)
     result = {}
-    result["q"] = int(data["q"])
-    result["depths"] = data["depths"]
-    # Try per-pair traces first
-    if "sigma_pair_all" in data:
-        result["sigma_pair_all"] = data["sigma_pair_all"]  # (n_pairs, n_depths)
-        result["pairs"] = data["pairs"]                    # (n_pairs, 2)
-    else:
-        result["sigma_pair_all"] = None
-        result["pairs"] = None
-    # Mean trace always present
-    result["sigma_pair_mean"] = data["sigma_pair_mean"]
+    result["q"]    = int(data["q"])
+    result["depths"] = data["ns"]                  # shape (n_depths,)
+    result["pairs"]  = data["pairs"]               # shape (n_pairs, 2)
+    # sigma_pair_mean is (n_pairs, n_depths) -- per-pair traces
+    result["sigma_pair_all"]  = data["sigma_pair_mean"]   # (n_pairs, n_depths)
+    result["sigma_pair_mean"] = data["sigma_pair_mean"].mean(axis=0)  # global mean
+    result["n0"] = int(data["n0"])
+    result["n1"] = int(data["n1"])
     return result
 
 
