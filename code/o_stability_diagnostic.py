@@ -231,8 +231,8 @@ def main():
     parser = argparse.ArgumentParser(
         description="Mode stability diagnostic for O-series npz outputs"
     )
-    parser.add_argument("--npz-dir", type=str, default=".",
-                        help="Directory containing npz files")
+    parser.add_argument("--npz-dir", type=str, default="o25_outputs",
+                        help="Directory containing npz files (default: ./o25_outputs)")
     parser.add_argument("--primes", type=int, nargs="+",
                         default=[29, 61, 101],
                         help="Primes to analyze")
@@ -262,6 +262,7 @@ def main():
     for q in args.primes:
         # Try both naming conventions used by o25_paired_pipeline.py
         candidates = [
+            npz_dir / f"q{q}_o25.npz",
             npz_dir / f"paired_q{q}.npz",
             npz_dir / f"o25_q{q}.npz",
             npz_dir / f"q{q}_paired.npz",
