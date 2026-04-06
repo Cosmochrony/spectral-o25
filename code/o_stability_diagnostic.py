@@ -74,89 +74,98 @@ def load_pair_data(npz_path: Path) -> dict:
 # Stability analysis
 # ---------------------------------------------------------------------------
 
+def cumulative_capacity(sigma_traces: np.ndarray) -> np.ndarray:
+    """Compute I(n) = sigma_pair(0) - sigma_pair(n) for each pair.
+
+    I(n) is the cumulative projected capacity up to BFS depth n.
+    It is the quantity that should be monotone increasing if the
+    identification  time ~ ordering of I(U_t)  holds.
+
+    Parameters
+    ----------
+    sigma_traces : (n_pairs, n_depths) or (n_depths,) array
+
+    Returns
+    -------
+    I : same shape as sigma_traces
+    """
+    if sigma_traces.ndim == 1:
+        return sigma_traces[0] - sigma_traces
+    return sigma_traces[:, 0:1] - sigma_traces  # broadcast over depths
+
+
 def analyze_stability(sigma_traces: np.ndarray, depths: np.ndarray,
-                      threshold_rel: float = THRESHOLD_REL,
-                      threshold_abs: float = THRESHOLD_ABS,
                       n_burn_in: int = N_BURN_IN) -> dict:
-    """Analyze stability of mode crossings.
+    """Analyze monotonicity and regression of I(n) per pair.
+
+    I(n) = sigma_pair(0) - sigma_pair(n) is the cumulative projected
+    capacity.  We test:
+      (A) I(n) is non-decreasing at every step (no regression)
+      (C) Once I(n) reaches a local maximum it does not decrease
 
     Parameters
     ----------
     sigma_traces : (n_pairs, n_depths) array
-        Per-pair sigma_pair(n) traces.
-    depths : (n_depths,) array
-        BFS depths corresponding to columns.
+    depths       : (n_depths,) array
 
     Returns
     -------
-    dict with keys:
-        n_pairs           : int
-        n_crossings       : number of pairs that crossed threshold
-        n_regressions     : number of pairs that regressed after crossing
-        regression_pairs  : list of pair indices that regressed
-        first_crossing_n  : array (n_pairs,) -- depth of first crossing, nan if none
-        stability_ratio   : n_crossings / n_pairs  (fraction that crossed)
-        monotone_ratio    : (n_crossings - n_regressions) / n_crossings
+    dict with per-pair and aggregate statistics on I(n).
     """
     n_pairs, n_depths = sigma_traces.shape
+    I = cumulative_capacity(sigma_traces)   # (n_pairs, n_depths)
+
     burn_mask = depths >= n_burn_in
+    I_burn = I[:, burn_mask]               # (n_pairs, n_burn_depths)
+    depths_burn = depths[burn_mask]
 
-    first_crossing_n = np.full(n_pairs, np.nan)
-    n_regressions = 0
-    regression_pairs = []
+    # Per-pair: count steps where I decreases
+    diffs = np.diff(I_burn, axis=1)        # (n_pairs, n_burn_depths - 1)
+    n_decreases_per_pair = (diffs < 0).sum(axis=1)
+    max_decrease_per_pair = np.where(diffs.min(axis=1) < 0,
+                                     diffs.min(axis=1), 0.0)
 
-    for i in range(n_pairs):
-        trace = sigma_traces[i]
-        # Per-pair adaptive threshold
-        thr = max(threshold_abs, threshold_rel * np.nanmax(trace))
-        # Find first crossing after burn-in
-        crossed = np.where(burn_mask & (trace > thr))[0]
-        if len(crossed) == 0:
-            continue
-        first_idx = crossed[0]
-        first_crossing_n[i] = depths[first_idx]
-        # Check for regression: any subsequent point below threshold
-        post = trace[first_idx + 1:]
-        if np.any(post < thr):
-            n_regressions += 1
-            regression_pairs.append(i)
+    regression_pairs = list(np.where(n_decreases_per_pair > 0)[0])
+    n_regressions = len(regression_pairs)
+    n_steps = I_burn.shape[1] - 1
 
-    n_crossings = int(np.sum(~np.isnan(first_crossing_n)))
-    stability_ratio = n_crossings / n_pairs if n_pairs > 0 else 0.0
-    monotone_ratio = ((n_crossings - n_regressions) / n_crossings
-                      if n_crossings > 0 else float("nan"))
+    # Monotone fraction across all pairs and steps
+    total_steps = n_pairs * n_steps
+    total_decreases = int(n_decreases_per_pair.sum())
+    monotone_fraction = (total_steps - total_decreases) / total_steps \
+                        if total_steps > 0 else float("nan")
 
     return {
         "n_pairs": n_pairs,
-        "n_crossings": n_crossings,
+        "n_steps": n_steps,
         "n_regressions": n_regressions,
         "regression_pairs": regression_pairs,
-        "first_crossing_n": first_crossing_n,
-        "stability_ratio": stability_ratio,
-        "monotone_ratio": monotone_ratio,
+        "n_decreases_per_pair": n_decreases_per_pair,
+        "max_decrease_per_pair": max_decrease_per_pair,
+        "total_decreases": total_decreases,
+        "monotone_fraction": monotone_fraction,
+        "is_monotone": n_regressions == 0,
+        "I": I,
+        "depths_burn": depths_burn,
+        "I_burn": I_burn,
     }
 
 
 def analyze_mean_monotonicity(sigma_mean: np.ndarray,
                               depths: np.ndarray,
                               n_burn_in: int = N_BURN_IN) -> dict:
-    """Check monotonicity of the mean trace I(U_t) = sigma_pair_mean(n).
+    """Check monotonicity of I_mean(n) = sigma_pair_mean(0) - sigma_pair_mean(n).
 
-    Returns
-    -------
-    dict with keys:
-        n_steps           : total steps after burn-in
-        n_decreases       : number of steps where mean decreased
-        max_decrease      : largest decrease (absolute)
-        is_monotone       : bool -- no decrease observed
-        monotone_fraction : fraction of steps with non-decrease
+    This is the mean cumulative projected capacity across all pairs.
     """
+    I_mean = cumulative_capacity(sigma_mean)   # (n_depths,)
     mask = depths >= n_burn_in
-    trace = sigma_mean[mask]
+    trace = I_mean[mask]
     diffs = np.diff(trace)
     n_decreases = int(np.sum(diffs < 0))
     max_decrease = float(np.min(diffs)) if len(diffs) > 0 else 0.0
     return {
+        "I_mean": I_mean,
         "n_steps": len(diffs),
         "n_decreases": n_decreases,
         "max_decrease": max_decrease,
@@ -173,24 +182,41 @@ def analyze_mean_monotonicity(sigma_mean: np.ndarray,
 def plot_traces(sigma_traces: np.ndarray, depths: np.ndarray,
                 q: int, out_dir: Path,
                 n_highlight: int = 5):
-    """Plot per-pair sigma_pair(n) traces for a given prime."""
-    fig, ax = plt.subplots(figsize=(9, 5))
-    n_pairs = sigma_traces.shape[0]
-    # Background: all pairs in grey
-    for i in range(n_pairs):
+    """Plot per-pair I(n) = sigma_pair(0) - sigma_pair(n) traces."""
+    I = cumulative_capacity(sigma_traces)   # (n_pairs, n_depths)
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+
+    # Left: raw sigma_pair(n)
+    ax = axes[0]
+    for i in range(I.shape[0]):
         ax.semilogy(depths, sigma_traces[i], color="grey",
                     alpha=0.15, linewidth=0.6)
-    # Highlight a few pairs
-    idxs = np.linspace(0, n_pairs - 1, min(n_highlight, n_pairs), dtype=int)
+    idxs = np.linspace(0, I.shape[0] - 1, min(n_highlight, I.shape[0]),
+                       dtype=int)
     colors = plt.cm.tab10(np.linspace(0, 1, len(idxs)))
     for idx, col in zip(idxs, colors):
         ax.semilogy(depths, sigma_traces[idx], color=col,
                     linewidth=1.4, label=f"pair {idx}")
     ax.set_xlabel("BFS depth $n$")
-    ax.set_ylabel(r"$\sigma_{\mathrm{pair}}(n)$")
-    ax.set_title(f"Per-pair traces  $q = {q}$  (all pairs grey, sample highlighted)")
-    ax.legend(fontsize=8, ncol=2)
+    ax.set_ylabel(r"$\sigma_{\mathrm{pair}}(n)$  (residual capacity)")
+    ax.set_title(f"Residual capacity  $q = {q}$")
+    ax.legend(fontsize=7, ncol=2)
     ax.grid(True, which="both", alpha=0.3)
+
+    # Right: I(n) = sigma(0) - sigma(n)  -- should be monotone increasing
+    ax = axes[1]
+    for i in range(I.shape[0]):
+        ax.plot(depths, I[i], color="grey", alpha=0.15, linewidth=0.6)
+    for idx, col in zip(idxs, colors):
+        ax.plot(depths, I[idx], color=col,
+                linewidth=1.4, label=f"pair {idx}")
+    ax.set_xlabel("BFS depth $n$")
+    ax.set_ylabel(r"$I(n) = \sigma_{\mathrm{pair}}(0) - \sigma_{\mathrm{pair}}(n)$")
+    ax.set_title(f"Cumulative projected capacity  $q = {q}$\n"
+                 r"(should be $\nearrow$ monotone — time proxy)")
+    ax.legend(fontsize=7, ncol=2)
+    ax.grid(True, alpha=0.3)
+
     fig.tight_layout()
     path = out_dir / f"traces_q{q}.pdf"
     fig.savefig(str(path))
@@ -201,7 +227,7 @@ def plot_traces(sigma_traces: np.ndarray, depths: np.ndarray,
 def plot_crossing_histogram(first_crossing_n: np.ndarray,
                             depths: np.ndarray, q: int,
                             out_dir: Path):
-    """Histogram of first-crossing depths."""
+    """Histogram of first-crossing depths — kept for compatibility."""
     valid = first_crossing_n[~np.isnan(first_crossing_n)]
     if len(valid) == 0:
         return None
@@ -234,12 +260,8 @@ def main():
                         help="Primes to analyze")
     parser.add_argument("--out-dir", type=str, default="stability_out",
                         help="Output directory for plots and summary")
-    parser.add_argument("--threshold-rel", type=float, default=THRESHOLD_REL,
-                        help="Relative threshold (fraction of per-pair max)")
-    parser.add_argument("--threshold-abs", type=float, default=THRESHOLD_ABS,
-                        help="Absolute floor threshold")
     parser.add_argument("--burn-in", type=int, default=N_BURN_IN,
-                        help="Minimum BFS depth before tracking")
+                        help="Minimum BFS depth before tracking (default: 2)")
     args = parser.parse_args()
 
     npz_dir = Path(args.npz_dir)
@@ -248,9 +270,8 @@ def main():
 
     print(f"\n{'='*60}")
     print(f"  O-series mode stability diagnostic")
-    print(f"  threshold_rel = {args.threshold_rel}  "
-          f"threshold_abs = {args.threshold_abs}  "
-          f"burn_in = {args.burn_in}")
+    print(f"  Testing I(n) = sigma_pair(0) - sigma_pair(n)  [cumulative capacity]")
+    print(f"  burn_in = {args.burn_in}")
     print(f"{'='*60}\n")
 
     summary_rows = []
@@ -273,9 +294,9 @@ def main():
         depths = data["depths"]
         sigma_mean = data["sigma_pair_mean"]
 
-        # --- Mean monotonicity test ---
+        # --- Mean monotonicity test on I_mean(n) ---
         mono = analyze_mean_monotonicity(sigma_mean, depths, args.burn_in)
-        print(f"  Mean trace monotonicity:")
+        print(f"  I_mean(n) = sigma_pair_mean(0) - sigma_pair_mean(n):")
         print(f"    steps after burn-in : {mono['n_steps']}")
         print(f"    decreases           : {mono['n_decreases']}")
         print(f"    max decrease        : {mono['max_decrease']:.3e}")
@@ -290,44 +311,44 @@ def main():
             "mean_max_decrease": mono["max_decrease"],
         }
 
-        # --- Per-pair stability test ---
+        # --- Per-pair stability test on I(n) ---
         if data["sigma_pair_all"] is not None:
             traces = data["sigma_pair_all"]
-            stab = analyze_stability(traces, depths,
-                                     args.threshold_rel,
-                                     args.threshold_abs,
-                                     args.burn_in)
-            print(f"  Per-pair stability:")
+            stab = analyze_stability(traces, depths, args.burn_in)
+            print(f"  Per-pair I(n) stability:")
             print(f"    n_pairs             : {stab['n_pairs']}")
-            print(f"    crossed threshold   : {stab['n_crossings']} "
-                  f"({100*stab['stability_ratio']:.1f}%)")
-            print(f"    regressions         : {stab['n_regressions']}")
-            print(f"    monotone ratio      : {stab['monotone_ratio']:.4f}")
+            print(f"    pairs with regression: {stab['n_regressions']} "
+                  f"({100*(1 - stab['monotone_fraction']):.1f}% of steps regress)")
+            print(f"    monotone fraction   : {stab['monotone_fraction']:.4f}")
+            print(f"    strictly monotone   : {stab['is_monotone']}")
             if stab["n_regressions"] > 0:
-                print(f"    *** REGRESSIONS DETECTED — "
-                      f"pairs: {stab['regression_pairs'][:10]} "
+                print(f"    *** REGRESSIONS in pairs: "
+                      f"{stab['regression_pairs'][:10]}"
                       f"{'...' if len(stab['regression_pairs']) > 10 else ''}")
+                worst = stab["n_decreases_per_pair"].argmax()
+                print(f"    worst pair {worst}: "
+                      f"{stab['n_decreases_per_pair'][worst]} decreases, "
+                      f"max drop = {stab['max_decrease_per_pair'][worst]:.3e}")
             else:
-                print(f"    No regressions detected — stability condition holds.")
+                print(f"    No regressions — I(n) strictly non-decreasing "
+                      f"for all pairs. Stability condition holds.")
 
             row.update({
                 "n_pairs": stab["n_pairs"],
-                "n_crossings": stab["n_crossings"],
                 "n_regressions": stab["n_regressions"],
-                "monotone_ratio": stab["monotone_ratio"],
+                "pair_mono_frac": stab["monotone_fraction"],
+                "is_monotone": stab["is_monotone"],
             })
 
-            # Plots
+            # Plots — now shows both sigma_pair(n) and I(n)
             plot_traces(traces, depths, q, out_dir)
-            plot_crossing_histogram(stab["first_crossing_n"], depths, q, out_dir)
         else:
-            print(f"  Per-pair traces not available in npz "
-                  f"(sigma_pair_all absent) — mean-only analysis.")
+            print(f"  Per-pair traces not available — mean-only analysis.")
             row.update({
                 "n_pairs": "n/a",
-                "n_crossings": "n/a",
                 "n_regressions": "n/a",
-                "monotone_ratio": "n/a",
+                "pair_mono_frac": "n/a",
+                "is_monotone": "n/a",
             })
 
         summary_rows.append(row)
@@ -337,27 +358,32 @@ def main():
     print(f"\n{'='*60}")
     print("  Summary")
     print(f"{'='*60}")
-    header = (f"{'q':>6}  {'mean_mono':>9}  {'mono_frac':>9}  "
-              f"{'n_decr':>6}  {'pairs':>6}  "
-              f"{'crossed':>7}  {'regress':>7}  {'mono_r':>7}")
+    def _fmt(v):
+        if v is None or v == "n/a":
+            return "n/a"
+        if isinstance(v, str):
+            return v
+        return f"{v:.4f}"
+
+    header = (f"{'q':>6}  {'I_mean_mono':>11}  {'I_mean_frac':>11}  "
+              f"{'pairs':>6}  {'regress':>7}  {'pair_frac':>9}  {'mono_all':>8}")
     print(header)
     print("-" * len(header))
     for r in summary_rows:
         print(
             f"{r['q']:>6}  "
-            f"{'YES' if r['mean_monotone'] else 'NO':>9}  "
-            f"{r['mean_mono_frac']:>9.4f}  "
-            f"{r['mean_n_decreases']:>6}  "
+            f"{'YES' if r['mean_monotone'] else 'NO':>11}  "
+            f"{r['mean_mono_frac']:>11.4f}  "
             f"{str(r.get('n_pairs','n/a')):>6}  "
-            f"{str(r.get('n_crossings','n/a')):>7}  "
             f"{str(r.get('n_regressions','n/a')):>7}  "
-            f"{str(r.get('monotone_ratio','n/a')):>7}"
+            f"{_fmt(r.get('pair_mono_frac')):>9}  "
+            f"{str(r.get('is_monotone','n/a')):>8}"
         )
     print()
     print("Interpretation:")
-    print("  mean_mono = YES  : mean I(U_t) is strictly non-decreasing — (A) holds")
-    print("  mono_r = 1.0     : no mode regressed after crossing — (C) holds")
-    print("  mono_r < 1.0     : regressions detected — stability condition fails")
+    print("  I_mean_mono = YES : mean I(n) = sigma(0)-sigma(n) is non-decreasing — (A) holds")
+    print("  pair_frac = 1.0   : I(n) non-decreasing for all pairs at every step — (C) holds")
+    print("  mono_all = True   : no pair ever regressed — stability condition fully holds")
     print()
     print(f"Plots saved to: {out_dir}/")
 

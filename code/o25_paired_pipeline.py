@@ -313,17 +313,47 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
 
     if verbose:
         import os
-        n_cores = os.cpu_count() if n_jobs == -1 else n_jobs
+        n_cores = os.cpu_count() if n_jobs == -1 else abs(n_jobs)
         print(f"  q={q}: {n_pairs} pairs x M={M} samples  "
               f"(n_jobs={n_jobs}, ~{n_cores} workers)...")
 
-    # Parallel computation: each pair is independent (O24 verticality)
-    job_results = Parallel(n_jobs=n_jobs, prefer="processes", verbose=0)(
-        delayed(_compute_one_pair)(
-            idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
+    # Parallel computation: each pair is independent (O24 verticality).
+    # We process pairs in batches of n_cores to emit a progress log between
+    # each batch, without impacting per-pair computation time.
+    # The shells object is large for big q: we use joblib's loky backend
+    # which shares memory via mmap on POSIX systems, avoiding repeated pickling.
+    import os
+    n_cores = os.cpu_count() if n_jobs == -1 else abs(n_jobs)
+    batch_size = max(1, n_cores)  # one batch = one wave of parallel jobs
+
+    job_results = []
+    n_done = 0
+    t_pairs_start = time.perf_counter()
+
+    for batch_start in range(0, n_pairs, batch_size):
+        batch = list(enumerate(pairs))[batch_start:batch_start + batch_size]
+        batch_results = Parallel(n_jobs=n_jobs, backend="loky", verbose=0)(
+            delayed(_compute_one_pair)(
+                idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
+            )
+            for idx, (c, qc) in batch
         )
-        for idx, (c, qc) in enumerate(pairs)
-    )
+        job_results.extend(batch_results)
+        n_done += len(batch)
+        if verbose:
+            elapsed = time.perf_counter() - t_pairs_start
+            rate    = n_done / elapsed          # pairs per second
+            eta_s   = (n_pairs - n_done) / rate if rate > 0 else float('inf')
+            eta_str = (f"{eta_s/3600:.1f}h" if eta_s >= 3600
+                       else f"{eta_s/60:.0f}min")
+            # Quick preview: mean delta_pair of pairs computed so far
+            done_deltas = [np.nanmean(r[2]) for r in batch_results
+                           if np.any(np.isfinite(r[2]))]
+            preview = (f"  last batch mean={np.mean(done_deltas):.3f}"
+                       if done_deltas else "")
+            print(f"  q={q}: {n_done}/{n_pairs} pairs done  "
+                  f"elapsed={elapsed/60:.1f}min  ETA={eta_str}{preview}",
+                  flush=True)
 
     # Reassemble results (order may differ from submission order)
     sigma_pair_mean = np.zeros((n_pairs, len(shells)))
