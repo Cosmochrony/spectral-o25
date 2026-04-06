@@ -65,6 +65,14 @@ import time
 import os
 import traceback
 
+# Fix BLAS/OpenMP threading to 1 before any numpy import.
+# Each joblib worker process is already a separate core; internal
+# multithreading from numpy/BLAS would cause over-subscription
+# (n_jobs workers × N BLAS threads >> available cores).
+for _var in ("OMP_NUM_THREADS", "MKL_NUM_THREADS",
+             "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"):
+    os.environ.setdefault(_var, "1")
+
 import numpy as np
 from joblib import Parallel, delayed
 
@@ -318,20 +326,22 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
               f"(n_jobs={n_jobs}, ~{n_cores} workers)...")
 
     # Parallel computation: each pair is independent (O24 verticality).
-    # We process pairs in batches of n_cores to emit a progress log between
-    # each batch, without impacting per-pair computation time.
-    # The shells object is large for big q: we use joblib's loky backend
-    # which shares memory via mmap on POSIX systems, avoiding repeated pickling.
-    import os
-    n_cores = os.cpu_count() if n_jobs == -1 else abs(n_jobs)
-    batch_size = max(1, n_cores)  # one batch = one wave of parallel jobs
+    #
+    # Progress: pairs are processed in fixed-size batches of PROGRESS_BATCH,
+    # independent of n_cores, so the first log line appears quickly even on
+    # machines with many cores (avoids waiting for a full wave of 32 or 120
+    # simultaneous jobs before any output).
+    #
+    # Backend: loky shares the shells object via mmap on POSIX, avoiding
+    # repeated pickling of the large shells list for each pair.
+    PROGRESS_BATCH = 5
 
-    job_results = []
-    n_done = 0
+    job_results   = []
+    n_done        = 0
     t_pairs_start = time.perf_counter()
 
-    for batch_start in range(0, n_pairs, batch_size):
-        batch = list(enumerate(pairs))[batch_start:batch_start + batch_size]
+    for batch_start in range(0, n_pairs, PROGRESS_BATCH):
+        batch = list(enumerate(pairs))[batch_start:batch_start + PROGRESS_BATCH]
         batch_results = Parallel(n_jobs=n_jobs, backend="loky", verbose=0)(
             delayed(_compute_one_pair)(
                 idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
@@ -342,14 +352,13 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
         n_done += len(batch)
         if verbose:
             elapsed = time.perf_counter() - t_pairs_start
-            rate    = n_done / elapsed          # pairs per second
+            rate    = n_done / elapsed
             eta_s   = (n_pairs - n_done) / rate if rate > 0 else float('inf')
             eta_str = (f"{eta_s/3600:.1f}h" if eta_s >= 3600
                        else f"{eta_s/60:.0f}min")
-            # Quick preview: mean delta_pair of pairs computed so far
             done_deltas = [np.nanmean(r[2]) for r in batch_results
                            if np.any(np.isfinite(r[2]))]
-            preview = (f"  last batch mean={np.mean(done_deltas):.3f}"
+            preview = (f"  batch mean={np.mean(done_deltas):.3f}"
                        if done_deltas else "")
             print(f"  q={q}: {n_done}/{n_pairs} pairs done  "
                   f"elapsed={elapsed/60:.1f}min  ETA={eta_str}{preview}",
