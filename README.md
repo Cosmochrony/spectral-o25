@@ -11,6 +11,19 @@ It addresses the final numerical question left open after **O24**:
 > Can the capacity exponent δpair be robustly measured across primes,
 > and if so, what controls its apparent variation?
 
+## Quick Summary
+
+δpair does not vary across primes.
+
+The apparent drift comes from finite-size effects in the observable:
+measurements are controlled by a BFS window whose depth is not yet asymptotic.
+
+As a result, standard extrapolations in q are structurally misleading.
+
+The correct scaling variable is not q, but n₁(q)/q.
+
+Once this is accounted for, all values are consistent with the expected range.
+
 ## Context
 
 **O16–O24** established that:
