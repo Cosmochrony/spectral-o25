@@ -113,13 +113,7 @@ The obstruction is therefore:
 
 Applying the O14 correction:
 
-$$
-\delta_{\mathrm{corr}}(q)
-=
-\delta_{\mathrm{pair}}(q)
--
-\eta \frac{\log q}{\log n_1(q)}
-$$
+$\delta_{\mathrm{corr}}(q) = \delta_{\mathrm{pair}}(q) - \eta \frac{\log q}{\log n_1(q)}$
 
 with $\eta = 1/2$ yields:
 
