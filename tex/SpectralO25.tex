@@ -10,9 +10,9 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 
-% ---------------------------------------------------------------
+
 % Theorem environments
-% ---------------------------------------------------------------
+
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{corollary}[theorem]{Corollary}
@@ -21,9 +21,9 @@
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{remark}[theorem]{Remark}
 
-% ---------------------------------------------------------------
+
 % Notation
-% ---------------------------------------------------------------
+
 \newcommand{\dpair}{\delta_{\mathrm{pair}}}
 \newcommand{\dpairmean}{\bar{\delta}_{\mathrm{pair}}}
 \newcommand{\bstar}{\beta^{*}}
@@ -34,7 +34,7 @@
 
 \begin{document}
 
-% ---------------------------------------------------------------
+
   \title{Systematic Pair-Level Campaign for $\delta_{\mathrm{pair}}$:\\
   Convergence, Inter-Pair Concentration, and Normalization Structure\\[4pt]
   {\normalsize O25 --- Spectral Admissibility Sub-programme}}
@@ -44,7 +44,7 @@
   \date{2026}
   \maketitle
 
-% ---------------------------------------------------------------
+
   \begin{abstract}
     The O-series establishes the transfer chain $c_\chi \to \dpair \to \bstar$
     unconditionally with respect to the fibre structure of the non-injective
@@ -81,10 +81,11 @@
     normalization correction; window depth; BFS; asymptotic analysis
   \end{abstract}
 
-% ---------------------------------------------------------------
+  \clearpage
   \tableofcontents
 
-% ---------------------------------------------------------------
+  \clearpage
+
   \section{Position of the Problem}
 
     \subsection{What O16--O24 established}
@@ -123,7 +124,6 @@
       Instead, it establishes why direct extrapolation in $q$ is structurally unreliable
       and identifies the correct analytical target: the ratio $n_1(q)/q$.
 
-% ---------------------------------------------------------------
   \section{Setup and Protocol}
 
     \subsection{Observable and block parameterisation}
@@ -158,6 +158,17 @@
       auto-calibrated fitting windows from the actual \texttt{sigma\_bar} after BFS,
       via the \texttt{find\_fitting\_window} procedure of O12~\cite{Beau2026a16}.
 
+      \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{o25_fig1_sigma_pair}
+        \caption{Log-log decay of mean $\sigpair(n)$ for each prime.
+        Circles: grand mean over all pairs.
+        Dashed line: OLS power-law fit over fitting window (shaded region).
+        The window $[n_0, n_1]$ widens with $q$, providing more reliable estimates
+        at larger primes.}
+        \label{fig:sigma_pair}
+      \end{figure}
+
       \begin{table}[h]
         \centering
         \begin{tabular}{rrrrrr}
@@ -165,10 +176,10 @@
           $q$ & $n_{\max}^{\mathrm{block}}$ & shells & $|G_q^{\mathrm{partial}}|$
           & window $[n_0, n_1]$ & $n_1/q$ \\
           \midrule
-          29 &  8 &  28 &    24\,145 & $[2,4]$   & 0.138 \\
-          61 & 10 &  58 &   224\,711 & $[2,8]$   & 0.131 \\
-          101 & 20 &  95 & 1\,019\,997 & $[3,11]$  & 0.109 \\
-          151 & 37 & 141 & 3\,408\,521 & $[3,13]$  & 0.086 \\
+          29  & 8  & 28  & 24\,145     & $[2,4]$  & 0.138 \\
+          61  & 10 & 58  & 224\,711    & $[2,8]$  & 0.131 \\
+          101 & 20 & 95  & 1\,019\,997 & $[3,11]$ & 0.109 \\
+          151 & 37 & 141 & 3\,408\,521 & $[3,13]$ & 0.086 \\
           \bottomrule
         \end{tabular}
         \caption{BFS and fitting parameters for each prime.
@@ -177,7 +188,6 @@
         \label{tab:params}
       \end{table}
 
-% ---------------------------------------------------------------
   \section{Numerical Results}
 
     \subsection{Main results table}
@@ -189,10 +199,10 @@
           $q$ & pairs & $M$ & $\dpairmean$ & $\sigma_q$ & $\sigma_q/\dpairmean$ (\%)
           & valid & $R^2_{\mathrm{global}}$ \\
           \midrule
-          29 &  14 & 50 & 8.893 & 0.539 & 6.1 & 14/14 & 0.9998 \\
-          61 &  30 & 50 & 9.983 & 0.259 & 2.6 & 30/30 & 0.9984 \\
-          101 &  50 & 50 & 9.548 & 0.161 & 1.7 & 50/50 & 0.9975 \\
-          151 &  75 & 50 & 9.125 & 0.139 & 1.5 & 75/75 & 0.9982 \\
+          29  & 14 & 50 & 8.893 & 0.539 & 6.1 & 14/14 & 0.9998 \\
+          61  & 30 & 50 & 9.983 & 0.259 & 2.6 & 30/30 & 0.9984 \\
+          101 & 50 & 50 & 9.548 & 0.161 & 1.7 & 50/50 & 0.9975 \\
+          151 & 75 & 50 & 9.125 & 0.139 & 1.5 & 75/75 & 0.9982 \\
           \bottomrule
         \end{tabular}
         \caption{Summary of O25 results.
@@ -215,6 +225,19 @@
       observable rank, so inter-pair variance is purely a sampling effect that
       vanishes as $M \to \infty$.
 
+      \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{o25_fig2_distribution}
+        \caption{Full distribution of $\dpair$ across all conjugate pairs for each prime,
+          sorted by value.
+          Horizontal line: mean $\dpairmean$.
+          Shaded band: $\pm\sigma_q$.
+          Green dashed lines: admissible window $[7.4, 10.6]$.
+          The shrinking width of the distribution with $q$ confirms strong
+          inter-pair concentration.}
+        \label{fig:distribution}
+      \end{figure}
+
     \subsection{$q$-dependence of $\dpairmean$}
 
       The sequence $\dpairmean(q)$ is not monotone: it rises from $q = 29$ to $q = 61$
@@ -225,7 +248,6 @@
       The physically relevant trend is the monotone decrease from $q = 61$ onward,
       with apparent stabilisation between $q = 101$ and $q = 151$.
 
-% ---------------------------------------------------------------
   \section{Structural Analysis: Why Extrapolation Fails}
 
     \subsection{Empirical fits are degenerate}
@@ -282,9 +304,9 @@
           \toprule
           $q$ & $\dpairmean$ & $\eta\,\log q/\log n_1$ & $\delta_{\mathrm{corr}}$ \\
           \midrule
-          61 & 9.983 & 0.988 & 8.995 \\
-          101 & 9.548 & 0.962 & 8.586 \\
-          151 & 9.125 & 0.978 & 8.147 \\
+          61  & 9.983        & 0.988                   & 8.995                    \\
+          101 & 9.548        & 0.962                   & 8.586                    \\
+          151 & 9.125        & 0.978                   & 8.147                    \\
           \bottomrule
         \end{tabular}
         \caption{O14 normalization correction applied to O25 data.
@@ -304,7 +326,19 @@
       The observation that it brings all three data points into the admissible window
       is consistent with this hypothesis but does not constitute a proof.
 
-% ---------------------------------------------------------------
+      \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{o25_fig3_convergence}
+        \caption{Left: raw $\dpairmean(q)$ with error bars ($\pm\sigma_q$) and two
+        empirical fits ($1/\!\log q$ and $1/(\log q)^2$), both consistent with the data
+        but producing different asymptotic values ($\delta_\infty \approx 5.32$
+          and $7.45$ respectively), illustrating the structural degeneracy.
+          Right: raw $\dpairmean$ (faded) vs O14-corrected
+          $\delta_{\mathrm{corr}} = \dpairmean - \eta\,\log q/\log n_1$ (solid, $\eta = 1/2$).
+          All corrected values fall within the admissible window $[7.4, 10.6]$ (green band).}
+        \label{fig:convergence}
+      \end{figure}
+
   \section{The Central Open Direction: $n_1(q)/q$}
 
     The analysis of Section~4 identifies the ratio $n_1(q)/q$ as the key quantity
@@ -329,7 +363,6 @@
     the instability is not a measurement artefact, but reflects the unresolved
     $q$-dependence of $n_1(q)/q$.
 
-% ---------------------------------------------------------------
   \section{Discussion}
 
     \subsection{What O25 establishes}
@@ -377,7 +410,6 @@
         rate of convergence of $n_1(q)/q$.
       \end{itemize}
 
-% ---------------------------------------------------------------
   \section{Conclusion}
 
     The convergence of $\dpair(q)$ is robust and the inter-pair concentration is
@@ -394,18 +426,21 @@
     ratio $n_1(q)/q$, which is identified as the central open direction for subsequent
     work.
 
-% ---------------------------------------------------------------
   \section*{Data and code availability}
 
     The numerical pipeline \texttt{o25\_paired\_pipeline.py}, the checkpoint files
     \texttt{q\{q\}\_o25.npz} for $q \in \{29, 61, 101, 151\}$, and the analysis
     script \texttt{o25\_analysis.py} are available at
-    \href{https://zenodo.org/}{Zenodo} [DOI to be assigned upon deposit].
+    \href{https://doi.org/10.5281/zenodo.18292335}{10.5281/zenodo.18292335}.
 
-% ---------------------------------------------------------------
   \section*{Acknowledgements}
 
-% ---------------------------------------------------------------
+    The author thanks the extended discussions within the Cosmochrony programme
+    that shaped the identification of $n_1(q)/q$ as the central asymptotic variable.
+    AI-assisted tools were used during the preparation of this work.
+    All scientific content, results, and conclusions are the sole responsibility
+    of the author.
+\clearpage
     \bibliographystyle{plain}
     \bibliography{cosmochrony-bibliography}
 
