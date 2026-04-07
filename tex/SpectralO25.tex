@@ -172,8 +172,8 @@
           \bottomrule
         \end{tabular}
         \caption{BFS and fitting parameters for each prime.
-        The ratio $n_1/q$ decreases with $q$, indicating that the fitting window
-        has not yet entered the asymptotic regime $n_1 \sim \alpha q$.}
+        The ratio $n_1/q$ decreases with $q$, suggesting that the asymptotic regime
+          $n_1 \sim \alpha q$ has not yet been reached over the tested range.}
         \label{tab:params}
       \end{table}
 
@@ -242,12 +242,15 @@
       $\delta_\infty \in \{5.32,\, 7.45,\, 5.80\}$ respectively.
 
       This degeneracy is not a statistical artefact.
-      It reflects a structural property of the problem:
-      the leading finite-size correction to $\dpairmean(q)$ is approximately constant
-      in $\log q$, making the deviations from $\delta_\infty$ indistinguishable from
-      multiple slowly varying functions over the accessible range.
+      It reflects a structural property of the problem: the leading correction behaves as
+      $\log q / \log n_1(q)$, which remains close to unity over the accessible range
+      since $n_1(q) = \Theta(q)$ (Window-Depth Theorem, O9~\cite{Beau2026a13}).
+      The deviations from $\delta_\infty$ are therefore indistinguishable from multiple
+      slowly varying functions over the accessible range.
+      The obstruction to extrapolation is not numerical precision,
+      but the internal normalization geometry of the observable.
 
-    \subsection{The leading correction is approximately constant in $\log q$}
+    \subsection{The leading correction behaves as $\log q / \log n_1(q) \approx 1$}
 
       The observable $\sigma_c(n)$ is normalised by $|S_n|$, whose growth in the
       pre-saturation window $[n_0, n_1]$ is not yet in the asymptotic Bass--Guivarc'h
@@ -258,12 +261,15 @@
         \delta_{\mathrm{corr}}(q) = \dpair(q) - \eta\,\frac{\log q}{\log n_1(q)},
       \end{equation}
       with $\eta = 1/2$ derived from the Weil amplitude scaling.
-      By the Window-Depth Theorem (O9~\cite{Beau2026a13}), $n_1(q) = \Theta(q)$,
-      so $\log n_1(q) \sim \log q$ and the correction factor
-      $\log q / \log n_1(q) \approx 1$ to leading order.
-      This means the dominant correction is \emph{approximately constant}, not
-      a power of $1/\log q$.
-      Any fit of the form $\delta_\infty + f(q)$ for a slowly varying $f$ will therefore
+      Since $n_1(q) = \Theta(q)$, as established at the level of scaling behaviour
+      in O9~\cite{Beau2026a13} without requiring identification of the proportionality
+      constant, one has $\log n_1(q) \sim \log q$ as $q \to \infty$,
+      so the correction factor $\log q / \log n_1(q) \to 1$.
+      From Table~\ref{tab:params}, the empirical values are $0.97$--$0.99$ over the
+      tested range, confirming that the correction is close to its limiting value.
+      This identifies the BFS window depth as the effective scale controlling
+      finite-size effects in the spectral observable.
+      Any fit of the form $\delta_\infty + f(q)$ for a slowly varying $f$ will
       describe the data well without carrying asymptotic meaning.
 
     \subsection{Corrected values are consistent with the admissible window}
@@ -291,10 +297,10 @@
 
       \noindent
       The corrected values are consistent with an asymptotic value
-      $\delta_\infty \in [7.4, 10.6]$.
-      We emphasise that $\eta = 1/2$ is derived in O14 under assumptions that have not
-      been verified in the exact O25 setting; the correction is therefore a
-      \emph{structural hypothesis} rather than a derived result.
+      $\delta_\infty \in [7.4, 10.6]$, but do not uniquely determine it.
+      We emphasise that $\eta = 1/2$ is imported from O14 and is not derived within the
+      present pipeline; the correction should therefore be interpreted as a structural
+      consistency test rather than a parameter-free prediction.
       The observation that it brings all three data points into the admissible window
       is consistent with this hypothesis but does not constitute a proof.
 
@@ -318,6 +324,10 @@
     \end{enumerate}
     Answering these questions would allow an analytical prediction of $\delta_\infty$
     from the structure of $\Heis$, independently of numerical extrapolation.
+    This also provides a structural explanation for the long-standing instability of
+    $\dpair$ estimates across primes observed since O12--O13~\cite{Beau2026a16,Beau2026a17}:
+    the instability is not a measurement artefact, but reflects the unresolved
+    $q$-dependence of $n_1(q)/q$.
 
 % ---------------------------------------------------------------
   \section{Discussion}
@@ -334,9 +344,10 @@
         This confirms the structural prediction of O24~\cite{Beau2026a28}.
 
         \item \textbf{Structural non-identifiability of $\delta_\infty$ by extrapolation.}
-        The leading finite-size correction is approximately constant in $\log q$,
-        making all empirical fits degenerate.
-        Direct extrapolation in $q$ cannot identify the asymptotic value.
+        The leading finite-size correction behaves as $\log q/\log n_1(q) \approx 1$,
+        making all empirical fits degenerate over the accessible range.
+        Direct extrapolation in $q$ cannot identify the asymptotic value;
+        the correct analytical variable is $n_1(q)/q$, not $q$ itself.
 
         \item \textbf{Consistency with the admissible window under O14 correction.}
         When the normalization correction of O14 is applied, all three data points
@@ -373,12 +384,12 @@
     strong, confirming that $\dpair$ is a structural invariant of the admissibility
     programme.
     Empirical fits in $q$ provide excellent descriptions of the data but carry no
-    asymptotic meaning, because the leading finite-size correction is governed by
-    the BFS window depth $n_1(q)$ and is approximately constant in $\log q$.
+    asymptotic meaning, because the leading finite-size correction behaves as
+    $\log q/\log n_1(q) \approx 1$ over the accessible range: the correct asymptotic
+    variable is the BFS window depth $n_1(q)$, not $q$ itself.
     When the O14 normalization correction is applied, the corrected values
     $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ are consistent with an asymptotic
-    value in the admissible window $[7.4, 10.6]$, for all tested primes
-    $q \in \{61, 101, 151\}$.
+    value in the admissible window $[7.4, 10.6]$, but do not uniquely determine it.
     The identification of $\delta_\infty$ therefore requires analytical control of the
     ratio $n_1(q)/q$, which is identified as the central open direction for subsequent
     work.
