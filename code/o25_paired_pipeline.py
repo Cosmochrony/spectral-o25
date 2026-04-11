@@ -216,8 +216,10 @@ def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
     rng = np.random.default_rng(base_seed + idx * 997 + c * 7)
     n_shells = len(shells)
     sp_accumulator = np.zeros(n_shells)
-    delta_arr = np.full(M, np.nan)
-    r2_arr    = np.full(M, np.nan)
+    delta_arr        = np.full(M, np.nan)
+    r2_arr           = np.full(M, np.nan)
+    sc_accumulator   = np.zeros(n_shells)
+    sqmc_accumulator = np.zeros(n_shells)
 
     for m in range(M):
         cb_c  = sample_block_with_c1(c,  q, rng)
@@ -230,13 +232,15 @@ def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
 
         n_sh = min(len(sv_c), len(sv_qc))
         sp   = sv_c[:n_sh] * sv_qc[:n_sh]
-        sp_accumulator[:n_sh] += sp
+        sp_accumulator[:n_sh]   += sp
+        sc_accumulator[:n_sh]   += sv_c[:n_sh]
+        sqmc_accumulator[:n_sh] += sv_qc[:n_sh]
 
         d, r2 = fit_delta_pair(sp, ns, n0, min(n1, n_sh - 1))
         delta_arr[m] = d
         r2_arr[m]    = r2
 
-    return idx, sp_accumulator / M, delta_arr, r2_arr
+    return idx, sp_accumulator / M, sc_accumulator / M, sqmc_accumulator / M, delta_arr, r2_arr
 
 
 def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
@@ -356,8 +360,8 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
             eta_s   = (n_pairs - n_done) / rate if rate > 0 else float('inf')
             eta_str = (f"{eta_s/3600:.1f}h" if eta_s >= 3600
                        else f"{eta_s/60:.0f}min")
-            done_deltas = [np.nanmean(r[2]) for r in batch_results
-                           if np.any(np.isfinite(r[2]))]
+            done_deltas = [np.nanmean(r[4]) for r in batch_results
+                           if np.any(np.isfinite(r[4]))]
             preview = (f"  batch mean={np.mean(done_deltas):.3f}"
                        if done_deltas else "")
             print(f"  q={q}: {n_done}/{n_pairs} pairs done  "
@@ -365,14 +369,18 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                   flush=True)
 
     # Reassemble results (order may differ from submission order)
-    sigma_pair_mean = np.zeros((n_pairs, len(shells)))
-    delta_samples   = np.full((n_pairs, M), np.nan)
-    r2_samples      = np.full((n_pairs, M), np.nan)
+    sigma_pair_mean  = np.zeros((n_pairs, len(shells)))
+    sigma_c_mean     = np.zeros((n_pairs, len(shells)))
+    sigma_qmc_mean   = np.zeros((n_pairs, len(shells)))
+    delta_samples    = np.full((n_pairs, M), np.nan)
+    r2_samples       = np.full((n_pairs, M), np.nan)
 
-    for idx, sp_mean, d_arr, r2_arr in job_results:
-        sigma_pair_mean[idx] = sp_mean
-        delta_samples[idx]   = d_arr
-        r2_samples[idx]      = r2_arr
+    for idx, sp_mean, sc_mean, sqmc_mean, d_arr, r2_arr in job_results:
+        sigma_pair_mean[idx]  = sp_mean
+        sigma_c_mean[idx]     = sc_mean
+        sigma_qmc_mean[idx]   = sqmc_mean
+        delta_samples[idx]    = d_arr
+        r2_samples[idx]       = r2_arr
 
     # Per-pair statistics
     delta_pair_mean = np.nanmean(delta_samples, axis=1)
@@ -400,6 +408,8 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
         ns=ns, shell_sizes=shell_sizes,
         n0=n0, n1=n1,
         sigma_pair_mean=sigma_pair_mean,
+        sigma_c_mean=sigma_c_mean,
+        sigma_qmc_mean=sigma_qmc_mean,
         delta_pair_samples=delta_samples,
         delta_pair_mean=delta_pair_mean,
         delta_pair_std=delta_pair_std,
@@ -429,6 +439,8 @@ def save_npz(res, out_path):
         n0                 = np.int64(res["n0"]),
         n1                 = np.int64(res["n1"]),
         sigma_pair_mean    = res["sigma_pair_mean"].astype(np.float64),
+        sigma_c_mean       = res["sigma_c_mean"].astype(np.float64),
+        sigma_qmc_mean     = res["sigma_qmc_mean"].astype(np.float64),
         delta_pair_samples = res["delta_pair_samples"].astype(np.float64),
         delta_pair_mean    = res["delta_pair_mean"].astype(np.float64),
         delta_pair_std     = res["delta_pair_std"].astype(np.float64),
