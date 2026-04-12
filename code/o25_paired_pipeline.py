@@ -243,9 +243,67 @@ def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
     return idx, sp_accumulator / M, sc_accumulator / M, sqmc_accumulator / M, delta_arr, r2_arr
 
 
+def _save_partial(path, q, seed, M, n_pairs_done,
+                  sigma_pair_mean, sigma_c_mean, sigma_qmc_mean,
+                  delta_samples, r2_samples,
+                  pairs_arr, ns, shell_sizes, n0, n1):
+    """
+    Write a partial checkpoint after each completed batch of pairs.
+    Only the rows 0..n_pairs_done-1 are stored.
+    Written atomically via a temp name to avoid corruption on interruption.
+    """
+    tmp = path.with_name(path.stem + "_tmp.npz")
+    np.savez(
+        tmp,
+        q                  = np.int64(q),
+        seed               = np.int64(seed),
+        M_per_pair         = np.int64(M),
+        n_pairs_done       = np.int64(n_pairs_done),
+        pairs              = pairs_arr.astype(np.int64),
+        ns                 = ns.astype(np.int64),
+        shell_sizes        = shell_sizes.astype(np.int64),
+        n0                 = np.int64(n0),
+        n1                 = np.int64(n1),
+        sigma_pair_mean    = sigma_pair_mean[:n_pairs_done].astype(np.float64),
+        sigma_c_mean       = sigma_c_mean[:n_pairs_done].astype(np.float64),
+        sigma_qmc_mean     = sigma_qmc_mean[:n_pairs_done].astype(np.float64),
+        delta_pair_samples = delta_samples[:n_pairs_done].astype(np.float64),
+        r2_samples         = r2_samples[:n_pairs_done].astype(np.float64),
+    )
+    tmp.replace(path)
+
+
+def _load_partial(path, q, seed, M, n_pairs):
+    """
+    Load a partial checkpoint if it exists and is compatible with the
+    current run parameters.
+    Returns (sigma_pair_mean, sigma_c_mean, sigma_qmc_mean,
+             delta_samples, r2_samples, start_pair)
+    or (None, None, None, None, None, 0) if not usable.
+    """
+    if not path.exists():
+        return None, None, None, None, None, 0
+    try:
+        zp     = np.load(path)
+        n_done = int(zp["n_pairs_done"])
+        if (int(zp["q"]) != q or int(zp["M_per_pair"]) != M
+                or int(zp["seed"]) != seed
+                or n_done <= 0 or n_done >= n_pairs):
+            return None, None, None, None, None, 0
+        return (zp["sigma_pair_mean"].astype(np.float64),
+                zp["sigma_c_mean"].astype(np.float64),
+                zp["sigma_qmc_mean"].astype(np.float64),
+                zp["delta_pair_samples"].astype(np.float64),
+                zp["r2_samples"].astype(np.float64),
+                n_done)
+    except Exception:
+        return None, None, None, None, None, 0
+
+
 def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                   bfs_frac=None, n_max_block=None, n0=None, n1=None,
-                  n_jobs=N_JOBS_DEFAULT, auto_window=False, verbose=True):
+                  n_jobs=N_JOBS_DEFAULT, auto_window=False,
+                  out_dir=None, verbose=True):
     """
     O25 computation for prime q: all (q-1)//2 conjugate pairs, M samples each.
 
@@ -260,6 +318,9 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     n_jobs       : parallel workers (-1 = all cores, 1 = sequential)
     auto_window  : if True, calibrate [n0,n1] from actual sigma_bar after BFS,
                    ignoring WINDOW_O12 table (use with --bfs-frac 0.99)
+    out_dir      : if set, a partial checkpoint q{q}_o25_partial.npz is written
+                   here after each batch; on restart the computation resumes
+                   from the last completed batch (loss <= PROGRESS_BATCH pairs)
     verbose      : print progress
 
     Returns
@@ -329,37 +390,67 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
         print(f"  q={q}: {n_pairs} pairs x M={M} samples  "
               f"(n_jobs={n_jobs}, ~{n_cores} workers)...")
 
-    # Parallel computation: each pair is independent (O24 verticality).
-    #
-    # Progress: pairs are processed in fixed-size batches of PROGRESS_BATCH,
-    # independent of n_cores, so the first log line appears quickly even on
-    # machines with many cores (avoids waiting for a full wave of 32 or 120
-    # simultaneous jobs before any output).
-    #
-    # Backend: loky shares the shells object via mmap on POSIX, avoiding
-    # repeated pickling of the large shells list for each pair.
-    PROGRESS_BATCH = 5
+    # Partial checkpoint path (None = no checkpointing)
+    partial_path = (pathlib.Path(out_dir) / f"q{q}_o25_partial.npz"
+                    if out_dir is not None else None)
 
-    job_results   = []
-    n_done        = 0
-    t_pairs_start = time.perf_counter()
+    # Initialise storage; try to resume from partial checkpoint
+    sigma_pair_mean  = np.zeros((n_pairs, len(shells)))
+    sigma_c_mean     = np.zeros((n_pairs, len(shells)))
+    sigma_qmc_mean   = np.zeros((n_pairs, len(shells)))
+    delta_samples    = np.full((n_pairs, M), np.nan)
+    r2_samples       = np.full((n_pairs, M), np.nan)
+    start_pair       = 0
 
-    for batch_start in range(0, n_pairs, PROGRESS_BATCH):
-        batch = list(enumerate(pairs))[batch_start:batch_start + PROGRESS_BATCH]
+    if partial_path is not None:
+        spm, scm, sqm, ds, rs, start_pair = _load_partial(
+            partial_path, q, seed, M, n_pairs)
+        if start_pair > 0:
+            sigma_pair_mean[:start_pair]  = spm
+            sigma_c_mean[:start_pair]     = scm
+            sigma_qmc_mean[:start_pair]   = sqm
+            delta_samples[:start_pair]    = ds
+            r2_samples[:start_pair]       = rs
+            if verbose:
+                print(f"  q={q}: resuming from partial checkpoint "
+                      f"({start_pair}/{n_pairs} pairs already done)")
+
+    # Parallel computation in batches; checkpoint after each batch.
+    PROGRESS_BATCH  = 5
+    remaining       = list(enumerate(pairs))[start_pair:]
+    n_done          = start_pair
+    t_pairs_start   = time.perf_counter()
+
+    for batch_start in range(0, len(remaining), PROGRESS_BATCH):
+        batch = remaining[batch_start:batch_start + PROGRESS_BATCH]
         batch_results = Parallel(n_jobs=n_jobs, backend="loky", verbose=0)(
             delayed(_compute_one_pair)(
                 idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
             )
             for idx, (c, qc) in batch
         )
-        job_results.extend(batch_results)
+        for idx, sp_mean, sc_mean, sqmc_mean, d_arr, r2_arr in batch_results:
+            sigma_pair_mean[idx]  = sp_mean
+            sigma_c_mean[idx]     = sc_mean
+            sigma_qmc_mean[idx]   = sqmc_mean
+            delta_samples[idx]    = d_arr
+            r2_samples[idx]       = r2_arr
         n_done += len(batch)
+
+        # Write partial checkpoint after every batch
+        if partial_path is not None:
+            _save_partial(partial_path, q, seed, M, n_done,
+                          sigma_pair_mean, sigma_c_mean, sigma_qmc_mean,
+                          delta_samples, r2_samples,
+                          pairs_arr, ns, shell_sizes, n0, n1)
+
         if verbose:
             elapsed = time.perf_counter() - t_pairs_start
-            rate    = n_done / elapsed
-            eta_s   = (n_pairs - n_done) / rate if rate > 0 else float('inf')
-            eta_str = (f"{eta_s/3600:.1f}h" if eta_s >= 3600
-                       else f"{eta_s/60:.0f}min")
+            computed = n_done - start_pair
+            rate     = computed / elapsed if elapsed > 0 else 1e-9
+            eta_s    = (n_pairs - n_done) / rate if rate > 0 else float('inf')
+            eta_str  = (f"{eta_s/3600:.1f}h" if eta_s >= 3600
+                        else f"{eta_s/60:.0f}min")
             done_deltas = [np.nanmean(r[4]) for r in batch_results
                            if np.any(np.isfinite(r[4]))]
             preview = (f"  batch mean={np.mean(done_deltas):.3f}"
@@ -368,19 +459,7 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                   f"elapsed={elapsed/60:.1f}min  ETA={eta_str}{preview}",
                   flush=True)
 
-    # Reassemble results (order may differ from submission order)
-    sigma_pair_mean  = np.zeros((n_pairs, len(shells)))
-    sigma_c_mean     = np.zeros((n_pairs, len(shells)))
-    sigma_qmc_mean   = np.zeros((n_pairs, len(shells)))
-    delta_samples    = np.full((n_pairs, M), np.nan)
-    r2_samples       = np.full((n_pairs, M), np.nan)
-
-    for idx, sp_mean, sc_mean, sqmc_mean, d_arr, r2_arr in job_results:
-        sigma_pair_mean[idx]  = sp_mean
-        sigma_c_mean[idx]     = sc_mean
-        sigma_qmc_mean[idx]   = sqmc_mean
-        delta_samples[idx]    = d_arr
-        r2_samples[idx]       = r2_arr
+    # Reassemble results
 
     # Per-pair statistics
     delta_pair_mean = np.nanmean(delta_samples, axis=1)
@@ -543,10 +622,16 @@ def main():
             n_max_block=args.n_max,
             n_jobs=args.n_jobs,
             auto_window=args.auto_window,
+            out_dir=args.out_dir,
             verbose=True,
         )
         save_npz(res, out_path)
         verify_npz(out_path)
+        # Remove partial checkpoint now that the final file is written
+        partial_path = args.out_dir / f"q{q}_o25_partial.npz"
+        if partial_path.exists():
+            partial_path.unlink()
+            print(f"  Removed partial checkpoint: {partial_path}")
         summary.append((
             q,
             res["delta_pair_global"], res["r2_global"],
