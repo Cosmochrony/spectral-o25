@@ -50,11 +50,11 @@
     The value $\dpair \approx 7.44$ extracted in O16~\cite{Beau2026a20} was based on a
     single conjugate pair per prime and a limited prime range.
     The present paper reports the first systematic campaign computing $\dpair$ across
-    \emph{all} $(q-1)/2$ conjugate pairs $(c, q-c)$ for $q \in \{29, 61, 101, 151\}$,
+    \emph{all} $(q-1)/2$ conjugate pairs $(c, q-c)$ for $q \in \{29, 61, 101, 151, 211\}$,
     with $M = 50$ independent block samples per pair.
     Three results are established.
     First, $\dpair(q)$ converges robustly: the inter-pair standard deviation decreases
-    from $0.54$ at $q = 29$ to $0.14$ at $q = 151$, confirming that $\dpair$ is a
+    from $0.54$ at $q = 29$ to $0.11$ at $q = 211$, confirming that $\dpair$ is a
     structural invariant of the Weil representation rather than a block-level fluctuation.
     Second, empirical fits of the form $\delta_\infty + a/\!\log q$ describe the data
     excellently over the tested range, but carry no asymptotic meaning:
@@ -65,7 +65,7 @@
     Third, when the O14 normalization correction
     $\eta\,\log q / \log n_1(q)$~\cite{Beau2026a18} is applied,
     the corrected values $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ fall within
-    the admissible window $[7.4, 10.6]$ consistently across $q \in \{61, 101, 151\}$.
+    the admissible window $[7.4, 10.6]$ consistently across $q \in \{61, 101, 151, 211\}$.
     This supports the interpretation that the apparent decrease of raw $\dpair(q)$ is a
     finite-size normalization effect rather than a signal of asymptotic drift below the
     admissible window.
@@ -115,7 +115,7 @@
       \begin{itemize}
         \item the full distribution of $\dpair$ across pairs at each prime,
         \item the mean $\dpairmean(q)$ and inter-pair standard deviation $\sigma_q$,
-        \item the $q$-dependence of these quantities over $q \in \{29, 61, 101, 151\}$.
+        \item the $q$-dependence of these quantities over $q \in \{29, 61, 101, 151, 211\}$.
       \end{itemize}
 
       The paper does \emph{not} claim to identify the asymptotic value $\delta_\infty$.
@@ -178,6 +178,7 @@
           61  & 10 & 58  & 224\,711    & $[2,8]$  & 0.131 \\
           101 & 20 & 95  & 1\,019\,997 & $[3,11]$ & 0.109 \\
           151 & 37 & 141 & 3\,408\,521 & $[3,13]$ & 0.086 \\
+          211 & 50 & 197 & 9\,393\,931 & $[3,14]$ & 0.066 \\
           \bottomrule
         \end{tabular}
         \caption{BFS and fitting parameters for each prime.
@@ -190,6 +191,10 @@
 
     \subsection{Main results table}
 
+      Table~\ref{tab:results} summarises the O25 campaign across all five primes.
+      For each prime, all $(q-1)/2$ conjugate pairs are covered with $M = 50$
+      independent block samples per pair.
+
       \begin{table}[h]
         \centering
         \begin{tabular}{rrrrrrrr}
@@ -197,10 +202,11 @@
           $q$ & pairs & $M$ & $\dpairmean$ & $\sigma_q$ & $\sigma_q/\dpairmean$ (\%)
           & valid & $R^2_{\mathrm{global}}$ \\
           \midrule
-          29  & 14 & 50 & 8.893 & 0.539 & 6.1 & 14/14 & 0.9998 \\
-          61  & 30 & 50 & 9.983 & 0.259 & 2.6 & 30/30 & 0.9984 \\
-          101 & 50 & 50 & 9.548 & 0.161 & 1.7 & 50/50 & 0.9975 \\
-          151 & 75 & 50 & 9.125 & 0.139 & 1.5 & 75/75 & 0.9982 \\
+          29  & 14  & 50 & 8.893 & 0.539 & 6.1 & 14/14  & 0.9998 \\
+          61  & 30  & 50 & 9.983 & 0.259 & 2.6 & 30/30  & 0.9984 \\
+          101 & 50  & 50 & 9.548 & 0.161 & 1.7 & 50/50  & 0.9975 \\
+          151 & 75  & 50 & 9.125 & 0.139 & 1.5 & 75/75  & 0.9982 \\
+          211 & 105 & 50 & 8.784 & 0.109 & 1.2 & 105/105 & 0.9971 \\
           \bottomrule
         \end{tabular}
         \caption{Summary of O25 results.
@@ -215,8 +221,9 @@
     \subsection{Inter-pair concentration}
 
       The inter-pair standard deviation decreases monotonically:
-      $\sigma_q \in \{0.539, 0.259, 0.161, 0.139\}$ for $q \in \{29, 61, 101, 151\}$.
-      The coefficient of variation drops from $6.1\%$ to $1.5\%$.
+      $\sigma_q \in \{0.539, 0.259, 0.161, 0.139, 0.109\}$ for
+      $q \in \{29, 61, 101, 151, 211\}$.
+      The coefficient of variation drops from $6.1\%$ to $1.2\%$.
       This concentration confirms that $\dpair$ is a structural invariant of the
       Weil representation on $\Heis$, as predicted by the verticality theorem of
       O24~\cite{Beau2026a28}: the fibre structure of~$\Pi$ cannot perturb the
@@ -239,27 +246,27 @@
     \subsection{$q$-dependence of $\dpairmean$}
 
       The sequence $\dpairmean(q)$ is not monotone: it rises from $q = 29$ to $q = 61$
-      ($8.89 \to 9.98$), then decreases from $q = 61$ to $q = 151$
-      ($9.98 \to 9.55 \to 9.13$).
+      ($8.89 \to 9.98$), then decreases from $q = 61$ to $q = 211$
+      ($9.98 \to 9.55 \to 9.13 \to 8.78$).
       The non-monotone step at $q = 29$ is consistent with the very short fitting window
       ([2,4], three points), which produces a less reliable estimate.
       The physically relevant trend is the monotone decrease from $q = 61$ onward,
-      with apparent stabilisation between $q = 101$ and $q = 151$.
+      continuing without sign of stabilisation through $q = 211$.
 
   \section{Structural Analysis: Why Extrapolation Fails}
 
     \subsection{Empirical fits are degenerate}
 
-      The sequence $\dpairmean(q)$ for $q \in \{61, 101, 151\}$ is well described by
+      The sequence $\dpairmean(q)$ for $q \in \{61, 101, 151, 211\}$ is well described by
       multiple functional forms:
       \begin{equation}
         \dpairmean(q) = \delta_\infty + \frac{a}{\log q}, \quad
         \dpairmean(q) = \delta_\infty + \frac{a}{(\log q)^2}, \quad
         \dpairmean(q) = \delta_\infty + \frac{a}{q^\alpha}.
       \end{equation}
-      All three fit the three data points with residuals below $0.06$, while producing
+      All three fit the four data points with residuals below $0.07$, while producing
       very different asymptotic values:
-      $\delta_\infty \in \{5.32,\, 7.45,\, 5.80\}$ respectively.
+      $\delta_\infty \in \{4.89,\, 7.16,\, 5.45\}$ respectively.
 
       This degeneracy is not a statistical artefact.
       It reflects a structural property of the problem: the leading correction behaves as
@@ -305,12 +312,13 @@
           61  & 9.983        & 0.988                   & 8.995                    \\
           101 & 9.548        & 0.962                   & 8.586                    \\
           151 & 9.125        & 0.978                   & 8.147                    \\
+          211 & 8.784        & 1.014                   & 7.771                    \\
           \bottomrule
         \end{tabular}
         \caption{O14 normalization correction applied to O25 data.
         The corrected values $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ fall within
-        the admissible window $[7.4, 10.6]$ for all three primes.
-        The correction factor $\eta\,\log q/\log n_1 \approx 0.97$--$0.99$ is
+        the admissible window $[7.4, 10.6]$ for all four primes.
+        The correction factor $\eta\,\log q/\log n_1 \approx 0.96$--$1.01$ is
         approximately constant, as predicted by the $n_1 = \Theta(q)$ scaling.}
         \label{tab:corrected}
       \end{table}
@@ -321,7 +329,7 @@
       We emphasise that $\eta = 1/2$ is imported from O14 and is not derived within the
       present pipeline; the correction should therefore be interpreted as a structural
       consistency test rather than a parameter-free prediction.
-      The observation that it brings all three data points into the admissible window
+      The observation that it brings all four data points into the admissible window
       is consistent with this hypothesis but does not constitute a proof.
 
       \begin{figure}[t]
@@ -329,8 +337,8 @@
         \includegraphics[width=\textwidth]{o25_fig3_convergence}
         \caption{Left: raw $\dpairmean(q)$ with error bars ($\pm\sigma_q$) and two
         empirical fits ($1/\!\log q$ and $1/(\log q)^2$), both consistent with the data
-        but producing different asymptotic values ($\delta_\infty \approx 5.32$
-          and $7.45$ respectively), illustrating the structural degeneracy.
+        but producing different asymptotic values ($\delta_\infty \approx 4.89$
+          and $7.16$ respectively), illustrating the structural degeneracy.
           Right: raw $\dpairmean$ (faded) vs O14-corrected
           $\delta_{\mathrm{corr}} = \dpairmean - \eta\,\log q/\log n_1$ (solid, $\eta = 1/2$).
           All corrected values fall within the admissible window $[7.4, 10.6]$ (green band).}
@@ -341,8 +349,8 @@
 
     The analysis of Section~4 identifies the ratio $n_1(q)/q$ as the key quantity
     controlling convergence.
-    From Table~\ref{tab:params}: $n_1(q)/q \in \{0.138, 0.131, 0.109, 0.086\}$ for
-    $q \in \{29, 61, 101, 151\}$.
+    From Table~\ref{tab:params}: $n_1(q)/q \in \{0.138, 0.131, 0.109, 0.086, 0.066\}$ for
+    $q \in \{29, 61, 101, 151, 211\}$.
     The ratio is \emph{decreasing}, not yet constant.
     This means the system is not in the asymptotic regime $n_1 \sim \alpha q$ for
     any fixed constant $\alpha$, and the correction of Section~4.2 is itself
@@ -370,7 +378,7 @@
       \begin{enumerate}
         \item \textbf{Numerical robustness.}
         $\dpair(q)$ converges and the inter-pair variance decreases strongly with $q$.
-        At $q = 151$, the coefficient of variation is $1.5\%$ over 75 pairs with $M = 50$
+        At $q = 211$, the coefficient of variation is $1.2\%$ over 105 pairs with $M = 50$
         samples each.
         This confirms the structural prediction of O24~\cite{Beau2026a28}.
 
@@ -381,8 +389,8 @@
         the correct analytical variable is $n_1(q)/q$, not $q$ itself.
 
         \item \textbf{Consistency with the admissible window under O14 correction.}
-        When the normalization correction of O14 is applied, all three data points
-        at $q \in \{61, 101, 151\}$ fall within $[7.4, 10.6]$.
+        When the normalization correction of O14 is applied, all four data points
+        at $q \in \{61, 101, 151, 211\}$ fall within $[7.4, 10.6]$.
         This is consistent with the interpretation that the apparent decrease of raw
         $\dpairmean(q)$ is a finite-size normalization effect.
       \end{enumerate}
@@ -404,7 +412,7 @@
         \item Analytical derivation of the asymptotic ratio $n_1(q)/q$ as $q \to \infty$.
         \item Verification of the O14 hypothesis $\eta = 1/2$ in the exact O25 pipeline
         setting.
-        \item Extension of the campaign to $q = 211$ and beyond, to constrain the
+        \item Extension of the campaign to $q = 307$ and beyond, to further constrain the
         rate of convergence of $n_1(q)/q$.
       \end{itemize}
 
@@ -419,7 +427,8 @@
     variable is the BFS window depth $n_1(q)$, not $q$ itself.
     When the O14 normalization correction is applied, the corrected values
     $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ are consistent with an asymptotic
-    value in the admissible window $[7.4, 10.6]$, but do not uniquely determine it.
+    value in the admissible window $[7.4, 10.6]$, but do not uniquely determine it,
+    for all tested primes $q \in \{61, 101, 151, 211\}$.
     The identification of $\delta_\infty$ therefore requires analytical control of the
     ratio $n_1(q)/q$, which is identified as the central open direction for subsequent
     work.
@@ -427,7 +436,7 @@
   \section*{Data and code availability}
 
     The numerical pipeline \texttt{o25\_paired\_pipeline.py}, the checkpoint files
-    \texttt{q\{q\}\_o25.npz} for $q \in \{29, 61, 101, 151\}$, and the analysis
+    \texttt{q\{q\}\_o25.npz} for $q \in \{29, 61, 101, 151, 211\}$, and the analysis
     script \texttt{o25\_analysis.py} are available at
     \href{https://doi.org/10.5281/zenodo.18292335}{10.5281/zenodo.18292335}.
 
@@ -438,7 +447,7 @@
     AI-assisted tools were used during the preparation of this work.
     All scientific content, results, and conclusions are the sole responsibility
     of the author.
-\clearpage
+    \clearpage
     \bibliographystyle{plain}
     \bibliography{cosmochrony-bibliography}
 
