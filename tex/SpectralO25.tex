@@ -202,10 +202,10 @@
           $q$ & pairs & $M$ & $\dpairmean$ & $\sigma_q$ & $\sigma_q/\dpairmean$ (\%)
           & valid & $R^2_{\mathrm{global}}$ \\
           \midrule
-          29  & 14  & 50 & 8.893 & 0.539 & 6.1 & 14/14  & 0.9998 \\
-          61  & 30  & 50 & 9.983 & 0.259 & 2.6 & 30/30  & 0.9984 \\
-          101 & 50  & 50 & 9.548 & 0.161 & 1.7 & 50/50  & 0.9975 \\
-          151 & 75  & 50 & 9.125 & 0.139 & 1.5 & 75/75  & 0.9982 \\
+          29  & 14  & 50 & 8.893 & 0.539 & 6.1 & 14/14   & 0.9998 \\
+          61  & 30  & 50 & 9.983 & 0.259 & 2.6 & 30/30   & 0.9984 \\
+          101 & 50  & 50 & 9.548 & 0.161 & 1.7 & 50/50   & 0.9975 \\
+          151 & 75  & 50 & 9.125 & 0.139 & 1.5 & 75/75   & 0.9982 \\
           211 & 105 & 50 & 8.784 & 0.109 & 1.2 & 105/105 & 0.9971 \\
           \bottomrule
         \end{tabular}
@@ -380,6 +380,9 @@
         $\dpair(q)$ converges and the inter-pair variance decreases strongly with $q$.
         At $q = 211$, the coefficient of variation is $1.2\%$ over 105 pairs with $M = 50$
         samples each.
+        The decrease of $\sigma_q$ is strictly monotone across all five primes with no
+        sign of a plateau, strengthening the evidence that $\dpair$ is a structural
+        invariant of the Weil representation.
         This confirms the structural prediction of O24~\cite{Beau2026a28}.
 
         \item \textbf{Structural non-identifiability of $\delta_\infty$ by extrapolation.}
@@ -421,6 +424,10 @@
     The convergence of $\dpair(q)$ is robust and the inter-pair concentration is
     strong, confirming that $\dpair$ is a structural invariant of the admissibility
     programme.
+    The raw sequence $\dpairmean(q)$ decreases monotonically from $q = 61$ to $q = 211$
+    without sign of stabilisation; this continuing decrease does not, however, signal
+    asymptotic drift below the admissible window, but reflects the $q$-dependent
+    normalization correction identified in O14.
     Empirical fits in $q$ provide excellent descriptions of the data but carry no
     asymptotic meaning, because the leading finite-size correction behaves as
     $\log q/\log n_1(q) \approx 1$ over the accessible range: the correct asymptotic
