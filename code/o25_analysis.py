@@ -44,9 +44,9 @@ from scipy.optimize import curve_fit
 DEFAULT_DATA_DIR = pathlib.Path("o25_outputs")
 DEFAULT_OUT_DIR  = pathlib.Path("o25_figures")
 
-PRIMES   = [29, 61, 101, 151]
-COLORS   = {29: "#4477aa", 61: "#ee6677", 101: "#228833", 151: "#ccbb44"}
-MARKERS  = {29: "o", 61: "s", 101: "^", 151: "D"}
+PRIMES   = [29, 61, 101, 151, 211]
+COLORS   = {29: "#4477aa", 61: "#ee6677", 101: "#228833", 151: "#ccbb44", 211: "#aa3377"}
+MARKERS  = {29: "o", 61: "s", 101: "^", 151: "D", 211: "P"}
 
 TARGET_LO, TARGET_HI = 7.4, 10.6
 ETA = 0.5   # O14 normalization exponent
@@ -78,8 +78,10 @@ def figure1_sigma_pair_profiles(data, out_dir):
     Log-log decay of mean sigma_pair(n) for each prime.
     One panel per prime, 2x2 layout.
     """
-    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    fig, axes = plt.subplots(2, 3, figsize=(15, 8))
     axes = axes.flatten()
+    # Hide the unused 6th panel
+    axes[5].set_visible(False)
 
     for ax, q in zip(axes, PRIMES):
         if q not in data:
@@ -271,7 +273,7 @@ def figure3_convergence(data, out_dir):
     ax1.set_title("(A) Raw $\\bar\\delta_{\\rm pair}$ and empirical fits", fontsize=10)
     ax1.legend(fontsize=7.5, loc="upper right")
     ax1.grid(True, alpha=0.3)
-    ax1.set_xlim(20, 165)
+    ax1.set_xlim(20, 225)
 
     # ── Right panel: raw vs corrected ────────────────────────────────────
     for q, dp, dp_c, std in zip(qs_avail, dp_arr, dp_corr, dp_std):
@@ -305,7 +307,7 @@ def figure3_convergence(data, out_dir):
                                  label=r"target $[7.4,\,10.6]$")],
                fontsize=8, loc="upper right")
     ax2.grid(True, alpha=0.3)
-    ax2.set_xlim(20, 165)
+    ax2.set_xlim(20, 225)
 
     fig.suptitle(r"Figure 3: Convergence of $\delta_{\rm pair}$ and normalization correction --- O25",
                  fontsize=11, fontweight="bold")

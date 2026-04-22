@@ -83,6 +83,7 @@ try:
         build_generators,
         bfs_shells,
         compute_block_capacity,
+        compute_block_capacity_with_residuals,
         find_fitting_window,
     )
 except Exception as e:
@@ -204,7 +205,7 @@ def fit_delta_pair(sigma_pair, ns, n0, n1):
 # ============================================================
 
 def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
-                      n0, n1, M, base_seed):
+                      n0, n1, M, base_seed, store_vectors=False):
     """
     Compute M samples of sigma_pair for the conjugate pair (c, q-c).
     Called in parallel by run_one_prime; must be a module-level function
@@ -212,23 +213,45 @@ def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
 
     Uses a per-pair seed derived from base_seed so results are reproducible
     regardless of the number of workers.
+
+    If store_vectors=True, also returns the raw residual-norm vectors
+    v_c^(n) and v_{qc}^(n) for n in [n0, n1] from the FIRST block sample
+    only.  These are required for the O26 Test 4 (r_eff = d_rho^2):
+      M_n = v_c^(n) ⊗ v_{qc}^(n),  C_c = (1/N) Σ_n vec(M_n) vec(M_n)†,
+      r_eff = rank(C_c).
+    Prediction: r_eff = 4 for spin-½ (d_rho=2), r_eff = 16 for spin-3/2.
+    Each stored vector has length |S_n| (shell size at depth n).
     """
     rng = np.random.default_rng(base_seed + idx * 997 + c * 7)
     n_shells = len(shells)
-    sp_accumulator = np.zeros(n_shells)
+    sp_accumulator   = np.zeros(n_shells)
     delta_arr        = np.full(M, np.nan)
     r2_arr           = np.full(M, np.nan)
     sc_accumulator   = np.zeros(n_shells)
     sqmc_accumulator = np.zeros(n_shells)
 
+    # Vectors for O26 Test 4 (first block only)
+    vecs_c   = None  # list of 1-D arrays, one per shell in [n0, n1]
+    vecs_qmc = None
+
     for m in range(M):
         cb_c  = sample_block_with_c1(c,  q, rng)
         cb_qc = sample_block_with_c1(qc, q, rng)
 
-        sv_c,  _, _, _ = compute_block_capacity(
-            shells, cb_c,  q, gens, n_max=n_max_block)
-        sv_qc, _, _, _ = compute_block_capacity(
-            shells, cb_qc, q, gens, n_max=n_max_block)
+        # First block: use residual-tracking variant when store_vectors=True
+        if store_vectors and m == 0:
+            sv_c,  _, _, _, raw_c_list = compute_block_capacity_with_residuals(
+                shells, cb_c,  q, gens, n_max=n_max_block, n0=n0, n1=n1)
+            sv_qc, _, _, _, raw_qc_list = compute_block_capacity_with_residuals(
+                shells, cb_qc, q, gens, n_max=n_max_block, n0=n0, n1=n1)
+            # Store as list of arrays indexed by window position k = n - n0
+            vecs_c   = raw_c_list    # list of 1-D float64 arrays
+            vecs_qmc = raw_qc_list
+        else:
+            sv_c,  _, _, _ = compute_block_capacity(
+                shells, cb_c,  q, gens, n_max=n_max_block)
+            sv_qc, _, _, _ = compute_block_capacity(
+                shells, cb_qc, q, gens, n_max=n_max_block)
 
         n_sh = min(len(sv_c), len(sv_qc))
         sp   = sv_c[:n_sh] * sv_qc[:n_sh]
@@ -240,7 +263,11 @@ def _compute_one_pair(idx, c, qc, shells, ns, q, gens, n_max_block,
         delta_arr[m] = d
         r2_arr[m]    = r2
 
-    return idx, sp_accumulator / M, sc_accumulator / M, sqmc_accumulator / M, delta_arr, r2_arr
+    return (idx,
+            sp_accumulator / M, sc_accumulator / M, sqmc_accumulator / M,
+            delta_arr, r2_arr,
+            vecs_c, vecs_qmc)
+
 
 
 def _save_partial(path, q, seed, M, n_pairs_done,
@@ -303,7 +330,7 @@ def _load_partial(path, q, seed, M, n_pairs):
 def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                   bfs_frac=None, n_max_block=None, n0=None, n1=None,
                   n_jobs=N_JOBS_DEFAULT, auto_window=False,
-                  out_dir=None, verbose=True):
+                  out_dir=None, verbose=True, store_vectors=False):
     """
     O25 computation for prime q: all (q-1)//2 conjugate pairs, M samples each.
 
@@ -325,7 +352,10 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
 
     Returns
     -------
-    dict with all results (see save_npz for the stored fields)
+    dict with all results (see save_npz for the stored fields).
+    If store_vectors=True, also includes 'vecs_c' and 'vecs_qmc': object
+    arrays of shape (n_pairs, n_window) where each element is a 1-D float64
+    array of residual norms for that shell (O26 Test 4 input).
     """
     if bfs_frac    is None: bfs_frac    = BFS_FRAC.get(q, BFS_FRAC_FALLBACK)
     if n_max_block is None: n_max_block = N_MAX_BLOCK.get(q, N_MAX_FALLBACK)
@@ -402,6 +432,11 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
     r2_samples       = np.full((n_pairs, M), np.nan)
     start_pair       = 0
 
+    # O26 Test 4 vector storage: object arrays, one entry per (pair, window-shell)
+    n_window = max(0, n1 - n0 + 1)
+    vecs_c_store   = np.empty((n_pairs, n_window), dtype=object) if store_vectors else None
+    vecs_qmc_store = np.empty((n_pairs, n_window), dtype=object) if store_vectors else None
+
     if partial_path is not None:
         spm, scm, sqm, ds, rs, start_pair = _load_partial(
             partial_path, q, seed, M, n_pairs)
@@ -415,6 +450,10 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
                 print(f"  q={q}: resuming from partial checkpoint "
                       f"({start_pair}/{n_pairs} pairs already done)")
 
+    if store_vectors and verbose:
+        print(f"  q={q}: --store-vectors enabled, window [{n0},{n1}] "
+              f"({n_window} shells per pair)")
+
     # Parallel computation in batches; checkpoint after each batch.
     PROGRESS_BATCH  = 5
     remaining       = list(enumerate(pairs))[start_pair:]
@@ -425,16 +464,22 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
         batch = remaining[batch_start:batch_start + PROGRESS_BATCH]
         batch_results = Parallel(n_jobs=n_jobs, backend="loky", verbose=0)(
             delayed(_compute_one_pair)(
-                idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed
+                idx, c, qc, shells, ns, q, gens, n_max_block, n0, n1, M, seed,
+                store_vectors=store_vectors,
             )
             for idx, (c, qc) in batch
         )
-        for idx, sp_mean, sc_mean, sqmc_mean, d_arr, r2_arr in batch_results:
+        for (idx, sp_mean, sc_mean, sqmc_mean, d_arr, r2_arr,
+             vecs_c, vecs_qmc) in batch_results:
             sigma_pair_mean[idx]  = sp_mean
             sigma_c_mean[idx]     = sc_mean
             sigma_qmc_mean[idx]   = sqmc_mean
             delta_samples[idx]    = d_arr
             r2_samples[idx]       = r2_arr
+            if store_vectors and vecs_c is not None:
+                for k, (vc, vqc) in enumerate(zip(vecs_c, vecs_qmc)):
+                    vecs_c_store[idx, k]   = vc
+                    vecs_qmc_store[idx, k] = vqc
         n_done += len(batch)
 
         # Write partial checkpoint after every batch
@@ -496,6 +541,9 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
         delta_pair_global=delta_global,
         r2_global=r2_global,
         wall_time_s=dt,
+        # O26 Test 4 vectors (None if --store-vectors not set)
+        vecs_c=vecs_c_store,
+        vecs_qmc=vecs_qmc_store,
     )
 
 
@@ -504,9 +552,13 @@ def run_one_prime(q, M=M_PER_PAIR_DEFAULT, seed=DEFAULT_SEED,
 # ============================================================
 
 def save_npz(res, out_path):
-    """Save result dict to .npz checkpoint."""
-    np.savez(
-        out_path,
+    """Save result dict to .npz checkpoint.
+
+    If res contains 'vecs_c' / 'vecs_qmc' (from --store-vectors), they are
+    saved as object arrays under the same keys.  numpy savez handles object
+    arrays transparently via pickle; load with allow_pickle=True.
+    """
+    payload = dict(
         q                  = np.int64(res["q"]),
         seed               = np.int64(res["seed"]),
         M_per_pair         = np.int64(res["M_per_pair"]),
@@ -528,12 +580,17 @@ def save_npz(res, out_path):
         r2_global          = np.float64(res["r2_global"]),
         wall_time_s        = np.float64(res["wall_time_s"]),
     )
-    print(f"  Saved: {out_path}")
+    if res.get("vecs_c") is not None:
+        payload["vecs_c"]   = res["vecs_c"]
+        payload["vecs_qmc"] = res["vecs_qmc"]
+    np.savez(out_path, **payload)
+    print(f"  Saved: {out_path}"
+          + (" (with vectors)" if res.get("vecs_c") is not None else ""))
 
 
 def verify_npz(path):
     """Quick sanity check: load and print key results."""
-    z  = np.load(path)
+    z  = np.load(path, allow_pickle=True)
     q  = int(z["q"])
     n0 = int(z["n0"])
     n1 = int(z["n1"])
@@ -543,9 +600,11 @@ def verify_npz(path):
     ds = float(np.nanstd(z["delta_pair_mean"]))
     np_ = int(z["pairs"].shape[0])
     M  = int(z["M_per_pair"])
+    has_vecs = "vecs_c" in z
     print(f"  [verify] q={q}  n_pairs={np_}  M={M}  window=[{n0},{n1}]  "
           f"delta_pair(mean/pairs)={dm:.4f}+/-{ds:.4f}  "
-          f"[global={dg:.4f}, R2={r2:.4f}]")
+          f"[global={dg:.4f}, R2={r2:.4f}]"
+          + ("  [vectors stored]" if has_vecs else ""))
 
 
 # ============================================================
@@ -580,6 +639,12 @@ def main():
                              "(required when --bfs-frac overrides the table)")
     parser.add_argument("--force",       action="store_true",
                         help="Recompute even if output exists")
+    parser.add_argument("--store-vectors", action="store_true",
+                        help="Store raw residual-norm vectors v_c^(n) and "
+                             "v_{q-c}^(n) in [n0,n1] for O26 Test 4 "
+                             "(r_eff = d_rho^2). Increases output file size. "
+                             "Requires spectral_O12.compute_block_capacity "
+                             "to return raw residuals as 4th element.")
     args = parser.parse_args()
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
@@ -593,6 +658,8 @@ def main():
     print(f"window     : {'auto-calibrate' if args.auto_window else 'from WINDOW_O12 table'}")
     print(f"Seed       : {args.seed}")
     print(f"Output dir : {args.out_dir}")
+    print(f"store-vecs : {args.store_vectors}"
+          + (" (O26 Test 4 data)" if args.store_vectors else ""))
     print()
 
     total_t0 = time.perf_counter()
@@ -624,6 +691,7 @@ def main():
             auto_window=args.auto_window,
             out_dir=args.out_dir,
             verbose=True,
+            store_vectors=args.store_vectors,
         )
         save_npz(res, out_path)
         verify_npz(out_path)

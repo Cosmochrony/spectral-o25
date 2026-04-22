@@ -229,6 +229,37 @@ def gram_schmidt_batch(basis_mat, new_vecs, eps=EPS_GS):
     return basis_mat, delta_r
 
 
+def gram_schmidt_batch_with_residuals(basis_mat, new_vecs, eps=EPS_GS):
+    """
+    Like gram_schmidt_batch, but also returns the residual norm for every
+    input vector (whether it was accepted into the basis or not).
+
+    Returns (new_basis_mat, delta_r, residual_norms)
+    where residual_norms is a 1-D float64 array of length len(new_vecs).
+    The residual norm for vector s is ‖w_s‖ after projection onto the span
+    accumulated so far (including vectors added earlier in this batch).
+    This is the quantity v_c^(n)[s] = ‖r_s^(n)‖ used in O26 §3.3.
+    """
+    delta_r = 0
+    residual_norms = np.zeros(len(new_vecs), dtype=np.float64)
+    if basis_mat is None:
+        basis_mat = np.empty((0, new_vecs.shape[1]), dtype=np.complex128)
+    for i, vec in enumerate(new_vecs):
+        if basis_mat.shape[0] >= new_vecs.shape[1]:
+            residual_norms[i] = 0.0
+            continue
+        w = vec.copy()
+        if basis_mat.shape[0] > 0:
+            coeffs = basis_mat.conj() @ w
+            w -= basis_mat.T @ coeffs
+        norm = float(np.linalg.norm(w))
+        residual_norms[i] = norm
+        if norm > eps:
+            basis_mat = np.vstack([basis_mat, (w / norm)[None, :]])
+            delta_r += 1
+    return basis_mat, delta_r, residual_norms
+
+
 def coherence_length(shells, q):
     """
     ell_gamma(n) = |mean_{g in S_n} exp(2pi i gamma_g / q)|.
@@ -298,6 +329,94 @@ def compute_block_capacity(shells, c_block, q, gens, n_max=None):
             np.array(delta_r_vals),
             np.array(shell_sizes),
             final_rank)
+
+
+def compute_block_capacity_with_residuals(shells, c_block, q, gens,
+                                          n_max=None, n0=None, n1=None):
+    """
+    Like compute_block_capacity, but also returns per-shell residual-norm
+    vectors v_c^(n) for shells in [n0, n1] (O26 §3.3).
+
+    v_c^(n) is a 1-D float64 array of length |S_n|, whose s-th component
+    is the residual norm ‖r_s^(n)‖ of the s-th Weil fingerprint vector in
+    shell S_n after projection onto the Gram-Schmidt span built over shells
+    0, ..., n-1.  Vectors below the EPS_GS threshold have residual = 0.
+
+    The outer product M_n = v_c^(n) ⊗ v_{q-c}^(n) ∈ R^{|S_n| × |S_{q-c,n}|}
+    satisfies ‖M_n‖²_HS = ‖v_c^(n)‖² · ‖v_{q-c}^(n)‖² ~ σ_c(n) · σ_{q-c}(n)
+    (O26 Eq. 11), enabling the Test 4 computation r_eff = rank(C_c).
+
+    Parameters
+    ----------
+    n0, n1 : int or None
+        Window for residual storage.  If None, stores all shells.
+
+    Returns
+    -------
+    sigma_vals    : 1-D array, same as compute_block_capacity
+    delta_r_vals  : 1-D array
+    shell_sizes   : 1-D array
+    final_rank    : int
+    residuals     : list of 1-D float64 arrays, one per shell in [n0, n1].
+                    Index k corresponds to shell n0+k.
+                    Empty list if n0 > n1 or no shells in range.
+    """
+    gens_arr = np.array(gens, dtype=np.int64)
+    c_block  = np.asarray(c_block, dtype=np.int64)
+    if n0 is None: n0 = 0
+    if n1 is None: n1 = 10**9
+
+    basis_mat   = None
+    sigma_vals  = []
+    delta_r_vals= []
+    shell_sizes = []
+    residuals   = []          # one entry per shell in [n0, n1]
+
+    for n, shell in enumerate(shells):
+        if n_max is not None and n > n_max:
+            break
+        if len(shell) == 0:
+            break
+        shell_arr = np.array(shell, dtype=np.int64)
+        delta_r   = 0
+        shell_residuals = []   # collect per-chunk residuals for this shell
+
+        capture = (n0 <= n <= n1)
+
+        for start in range(0, len(shell_arr), CHUNK_SIZE):
+            chunk = shell_arr[start:start + CHUNK_SIZE]
+            vecs  = fingerprint_vectors_batch(chunk, c_block, gens_arr, q)
+            if capture:
+                basis_mat, dr, res = gram_schmidt_batch_with_residuals(
+                    basis_mat, vecs)
+                shell_residuals.append(res)
+            else:
+                basis_mat, dr = gram_schmidt_batch(basis_mat, vecs)
+            delta_r += dr
+            if basis_mat is not None and basis_mat.shape[0] >= q:
+                break
+
+        sz    = len(shell)
+        sigma = delta_r / sz if sz > 0 else 0.0
+        sigma_vals.append(sigma)
+        delta_r_vals.append(delta_r)
+        shell_sizes.append(sz)
+
+        if capture:
+            residuals.append(
+                np.concatenate(shell_residuals) if shell_residuals
+                else np.zeros(0, dtype=np.float64)
+            )
+
+        if basis_mat is not None and basis_mat.shape[0] >= q:
+            break
+
+    final_rank = 0 if basis_mat is None else basis_mat.shape[0]
+    return (np.array(sigma_vals),
+            np.array(delta_r_vals),
+            np.array(shell_sizes),
+            final_rank,
+            residuals)
 
 
 def ols_loglog(ns, sigma_bar, n0, n1):
