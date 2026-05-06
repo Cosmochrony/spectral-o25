@@ -9,6 +9,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{doi}
 
 
 % Theorem environments
@@ -249,7 +250,10 @@
       ($8.89 \to 9.98$), then decreases from $q = 61$ to $q = 211$
       ($9.98 \to 9.55 \to 9.13 \to 8.78$).
       The non-monotone step at $q = 29$ is consistent with the very short fitting window
-      ([2,4], three points), which produces a less reliable estimate.
+      ($[2,4]$ in the main campaign, three points; $[2,5]$ in the extended M=20 run),
+      which produces a less reliable estimate.
+      In the extended run (Figure~\ref{fig:scaling}), $q = 29$ also has only $11/14$
+      valid pairs due to convergence failures in the shortest windows.
       The physically relevant trend is the monotone decrease from $q = 61$ onward,
       continuing without sign of stabilisation through $q = 211$.
 
@@ -345,6 +349,26 @@
         \label{fig:convergence}
       \end{figure}
 
+      \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{o25_scaling}
+        \caption{Convergence of $\dpair$ with $q$ from the extended O25 campaign
+          ($q \in \{29, 61, 101, 151, 211\}$, $M = 20$, windows from the WINDOW\_O12 table).
+          Squares (blue): $\delta_{\mathrm{global}}$, the OLS exponent on the mean
+          $\sigma_{\mathrm{pair}}$ trajectory.
+          Circles (red): $\dpairmean$, mean over conjugate pairs, with $\pm 2\,\mathrm{SE}$
+          error bars.
+          Dashed blue: fit $\delta_{\mathrm{global}} \approx 6.84 + 33.0/\sqrt{q}$,
+          extrapolating to $\hat{\delta}_\infty = 6.84$ (slightly below the O24 prediction
+          of $7.44$, consistent with the known negative bias of $\delta_{\mathrm{global}}$
+          relative to $\dpairmean$).
+          Green band: admissible window $[7.4, 10.6]$ from O10.
+          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.
+          The annotation $(11/14~\text{pairs})$ at $q = 29$ flags incomplete pair coverage
+          due to short fitting window.}
+        \label{fig:scaling}
+      \end{figure}
+
   \section{The Central Open Direction: $n_1(q)/q$}
 
     The analysis of Section~4 identifies the ratio $n_1(q)/q$ as the key quantity
@@ -417,6 +441,18 @@
         setting.
         \item Extension of the campaign to $q = 307$ and beyond, to further constrain the
         rate of convergence of $n_1(q)/q$.
+        \item Execution of O26 Test~4 (effective dimension $r_{\mathrm{eff}} = d_\rho^2$
+        of the covariance trajectory).
+        A partial numerical implementation of the canonical embedding
+        $\Phi_{q,\rho} = \rho \circ \iota \circ \pi$ (proved unconditionally in
+        O27~\cite{Beau2026a31}) was carried out on O25 data at $q \in \{29, 61\}$.
+        The current approximation of $\pi$ by the leading Gram--Schmidt basis vectors
+        yields $r_{\mathrm{eff}} = 2$ universally, an artefact of the DC mode dominating
+        the projection; the correct implementation requires restricting the ADE
+        eigenvectors of $\mathrm{Cay}(G_q, S_q)$ to the Weil representation space
+        via the Peter--Weyl coefficient map,
+        identified as an open problem in Hecke spectral theory
+        (see O26~\cite{Beau2026a30}, Remark~6.3).
       \end{itemize}
 
   \section{Conclusion}
@@ -443,9 +479,12 @@
   \section*{Data and code availability}
 
     The numerical pipeline \texttt{o25\_paired\_pipeline.py}, the checkpoint files
-    \texttt{q\{q\}\_o25.npz} for $q \in \{29, 61, 101, 151, 211\}$, and the analysis
-    script \texttt{o25\_analysis.py} are available at
+    \texttt{q\{q\}\_o25.npz} for $q \in \{29, 61, 101, 151, 211\}$, the analysis
+    script \texttt{o25\_analysis.py}, and the scaling plot script
+    \texttt{o25\_scaling\_plot.py} are available at
     \href{https://doi.org/10.5281/zenodo.18292335}{10.5281/zenodo.18292335}.
+    The extended M=20 run checkpoint files and the figure \texttt{o25\_scaling.pdf}
+    are included in the same deposit.
 
   \section*{Acknowledgements}
 
