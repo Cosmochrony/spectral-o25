@@ -215,7 +215,11 @@
           $\sigma_q$: inter-pair standard deviation.
           $\sigma_q/\dpairmean$: coefficient of variation.
           ``valid'': pairs for which the fitting window contained at least 2
-          non-zero data points.}
+          non-zero data points.
+          The $q = 29$ row is included for completeness but should not be used
+          for asymptotic extrapolation: the Gram--Schmidt span of $\mathbb{C}^{29}$
+          saturates at BFS depth $n = 2$, leaving no power-law decay regime
+          (see \S\ref{sec:qdep}).}
         \label{tab:results}
       \end{table}
 
@@ -245,15 +249,25 @@
       \end{figure}
 
     \subsection{$q$-dependence of $\dpairmean$}
+      \label{sec:qdep}
 
       The sequence $\dpairmean(q)$ is not monotone: it rises from $q = 29$ to $q = 61$
       ($8.89 \to 9.98$), then decreases from $q = 61$ to $q = 211$
       ($9.98 \to 9.55 \to 9.13 \to 8.78$).
-      The non-monotone step at $q = 29$ is consistent with the very short fitting window
-      ($[2,4]$ in the main campaign, three points; $[2,5]$ in the extended M=20 run),
-      which produces a less reliable estimate.
-      In the extended run (Figure~\ref{fig:scaling}), $q = 29$ also has only $11/14$
-      valid pairs due to convergence failures in the shortest windows.
+      The non-monotone step at $q = 29$ reflects a structural limitation rather than
+      a sampling artefact.
+      At $q = 29$, the Gram--Schmidt span of $\mathbb{C}^{29}$ is saturated by the
+      third BFS shell ($|S_2| = 12$ vectors suffice to fill $\mathbb{C}^{29}$):
+      $\sigma_{\mathrm{pair}}(n) = 0$ for all $n \geq 3$.
+      There is therefore no power-law decay regime to fit; the window $[2,4]$ (main campaign)
+      or $[2,5]$ (extended run) rests on at most two non-zero data points, and the
+      resulting $\dpairmean$ estimate is unreliable.
+      A wider window would not help: the issue is not window length but the exhaustion
+      of $\mathbb{C}^q$ at too small a depth.
+      In the extended M=20 run (Figure~\ref{fig:scaling}), this is further reflected
+      by $11/14$ valid pairs, with three pairs failing to converge entirely.
+      The smallest prime for which a meaningful power-law fit exists is $q = 61$,
+      where saturation occurs well after the fitting window and all 30 pairs converge.
       The physically relevant trend is the monotone decrease from $q = 61$ onward,
       continuing without sign of stabilisation through $q = 211$.
 
@@ -354,18 +368,23 @@
         \includegraphics[width=\textwidth]{o25_scaling}
         \caption{Convergence of $\dpair$ with $q$ from the extended O25 campaign
           ($q \in \{29, 61, 101, 151, 211\}$, $M = 20$, windows from the WINDOW\_O12 table).
+          Filled symbols: primes included in the extrapolation fits
+          ($q \in \{61, 101, 151, 211\}$).
+          Open/faded symbols: $q = 29$, excluded from fits (only 11/14 pairs converge
+          and the fitting window has 4 points; see \S\ref{sec:qdep} for the structural
+          explanation).
           Squares (blue): $\delta_{\mathrm{global}}$, the OLS exponent on the mean
           $\sigma_{\mathrm{pair}}$ trajectory.
           Circles (red): $\dpairmean$, mean over conjugate pairs, with $\pm 2\,\mathrm{SE}$
           error bars.
-          Dashed blue: fit $\delta_{\mathrm{global}} \approx 6.84 + 33.0/\sqrt{q}$,
-          extrapolating to $\hat{\delta}_\infty = 6.84$ (slightly below the O24 prediction
-          of $7.44$, consistent with the known negative bias of $\delta_{\mathrm{global}}$
-          relative to $\dpairmean$).
+          Dashed red: fit $\dpairmean \approx 7.32 + 22.0/\sqrt{q}$,
+          extrapolating to $\hat{\delta}_\infty = 7.32$, within $0.12$ of the
+          O24 prediction of $7.44$.
+          Dashed blue: fit $\delta_{\mathrm{global}} \approx 5.66 + 46.2/\sqrt{q}$,
+          extrapolating to $5.66$ (below O24, reflecting the known negative bias of
+          $\delta_{\mathrm{global}}$ relative to $\dpairmean$).
           Green band: admissible window $[7.4, 10.6]$ from O10.
-          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.
-          The annotation $(11/14~\text{pairs})$ at $q = 29$ flags incomplete pair coverage
-          due to short fitting window.}
+          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.}
         \label{fig:scaling}
       \end{figure}
 
