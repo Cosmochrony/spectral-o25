@@ -59,16 +59,26 @@ def load_all(npz_dir):
         # Standard error on the mean across pairs
         se  = float(np.nanstd(dm_arr) / np.sqrt(n_valid)) if n_valid > 1 else np.nan
 
+        # Count non-zero sigma_pair values within the fitting window
+        sigma_pm = d["sigma_pair_mean"]    # (P, N_shells)
+        ns_arr   = d["ns"]                 # (N_shells,)
+        in_win   = (ns_arr >= n0) & (ns_arr <= n1)
+        # Mean sigma_pair across pairs, within window
+        sig_win  = sigma_pm[:, in_win].mean(axis=0)
+        n_nonzero_win = int(np.sum(sig_win > 0))
+
         records.append(dict(
             q=q, M=M, n0=n0, n1=n1,
             delta_global=dg, r2_global=r2g,
             delta_mean=dm, delta_mean_se=se,
             n_valid=n_valid, n_total=n_total,
+            n_nonzero_win=n_nonzero_win,
             path=path,
         ))
+        flag = "  [EXCLUDED: <3 non-zero pts in window]" if n_nonzero_win < 3 else ""
         print(f"  q={q:3d}  M={M:3d}  window=[{n0},{n1}]  "
               f"delta_global={dg:.3f}  delta_mean={dm:.3f}+/-{se:.3f}  "
-              f"({n_valid}/{n_total} pairs)")
+              f"({n_valid}/{n_total} pairs)  {n_nonzero_win} pts in window{flag}")
 
     return sorted(records, key=lambda r: r["q"])
 
@@ -94,10 +104,29 @@ def make_plot(records, out_path):
     dm      = np.array([r["delta_mean"]    for r in records])
     dm_se   = np.array([r["delta_mean_se"] for r in records])
 
+    # Exclude structurally unreliable primes from fits.
+    # Criterion: fewer than half the pairs valid, OR window < 5 points,
+    # OR n_valid/n_total < 0.9 (too many failed pairs).
+    def is_reliable(r):
+        frac_valid = r["n_valid"] / r["n_total"] if r["n_total"] > 0 else 0
+        n_win = r["n1"] - r["n0"] + 1
+        return frac_valid >= 0.9 and n_win >= 5
+
+    records_fit = [r for r in records if is_reliable(r)]
+    excluded    = [r["q"] for r in records if not is_reliable(r)]
+    if excluded:
+        for r in records:
+            if not is_reliable(r):
+                frac = r["n_valid"]/r["n_total"]
+                nwin = r["n1"] - r["n0"] + 1
+                print(f"  Excluded q={r['q']:3d}: "
+                      f"{r['n_valid']}/{r['n_total']} pairs ({frac:.0%}), "
+                      f"window={nwin} pts  [unreliable]")
+
     # Fit on delta_global (monotone, robust).
     # Fit on delta_mean only if C > 0 (physically meaningful decreasing trend).
-    inf_g, C_g, q_fit, y_fit_g = fit_scaling(records, key="delta_global")
-    inf_m, C_m, _,     y_fit_m = fit_scaling(records, key="delta_mean")
+    inf_g, C_g, q_fit, y_fit_g = fit_scaling(records_fit, key="delta_global")
+    inf_m, C_m, _,     y_fit_m = fit_scaling(records_fit, key="delta_mean")
     show_mean_fit = (inf_m is not None and C_m is not None and C_m > 0)
 
     O10_lo, O10_hi = 7.4, 10.6
@@ -126,17 +155,36 @@ def make_plot(records, out_path):
                       fr"$\hat{{\delta}}_{{\infty}} = {inf_m:.2f}$, $C={C_m:.1f}$")
         ax.axhline(inf_m, color="tomato", lw=0.7, ls=":", alpha=0.5)
 
-    # delta_global
-    ax.scatter(qs, dg, marker="s", s=45, color="steelblue", zorder=4,
-               label=r"$\delta_{\mathrm{global}}$ (OLS on mean trajectory)")
+    # Split into fit-included and excluded primes
+    excl_mask = np.array([not is_reliable(r)
+                          for r in records])
+
+    # delta_global: included (solid) and excluded (open)
+    if np.any(~excl_mask):
+        ax.scatter(qs[~excl_mask], dg[~excl_mask], marker="s", s=45,
+                   color="steelblue", zorder=4,
+                   label=r"$\delta_{\mathrm{global}}$ (OLS on mean trajectory)")
+    if np.any(excl_mask):
+        ax.scatter(qs[excl_mask], dg[excl_mask], marker="s", s=45,
+                   facecolors="none", edgecolors="steelblue",
+                   linewidths=1.5, zorder=4, alpha=0.5,
+                   label=r"$\delta_{\mathrm{global}}$ (excluded from fit)")
     ax.plot(qs, dg, color="steelblue", lw=0.9, alpha=0.5)
 
-    # delta_mean with 2SE error bars
-    ax.errorbar(qs[valid_m], dm[valid_m], yerr=2*dm_se[valid_m],
-                fmt="o", color="tomato", capsize=3, capthick=1.2,
-                lw=1.2, ms=5, zorder=5,
-                label=r"$\delta_{\mathrm{mean}}$ (mean over pairs, $\pm 2\,\mathrm{SE}$)")
-    ax.plot(qs[valid_m], dm[valid_m], color="tomato", lw=0.9, alpha=0.5)
+    # delta_mean with 2SE error bars — exclude unreliable primes
+    incl_m = valid_m & ~excl_mask
+    excl_m = valid_m & excl_mask
+    if np.any(incl_m):
+        ax.errorbar(qs[incl_m], dm[incl_m], yerr=2*dm_se[incl_m],
+                    fmt="o", color="tomato", capsize=3, capthick=1.2,
+                    lw=1.2, ms=5, zorder=5,
+                    label=r"$\delta_{\mathrm{mean}}$ (mean over pairs, $\pm 2\,\mathrm{SE}$)")
+        ax.plot(qs[incl_m], dm[incl_m], color="tomato", lw=0.9, alpha=0.5)
+    if np.any(excl_m):
+        ax.errorbar(qs[excl_m], dm[excl_m], yerr=2*dm_se[excl_m],
+                    fmt="o", color="tomato", capsize=3, capthick=1.2,
+                    lw=1.2, ms=3, zorder=4, alpha=0.35,
+                    markerfacecolor="none", markeredgecolor="tomato")
 
     # Annotate window and M on delta_global points
     for r in records:
