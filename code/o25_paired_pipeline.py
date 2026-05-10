@@ -1,5 +1,5 @@
 """
-o25_paired_pipeline.py
+o25/o25_paired_pipeline.py
 ======================
 O25 numerical campaign: systematic delta_pair computation across all
 conjugate pairs (c, q-c) and all target primes q.
