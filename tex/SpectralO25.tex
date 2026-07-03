@@ -9,6 +9,7 @@
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{enumitem}
 \usepackage{doi}
 
 
@@ -50,34 +51,35 @@
     projection~$\Pi$~\cite{Beau2026a28}.
     The value $\dpair \approx 7.44$ extracted in O16~\cite{Beau2026a20} was based on a
     single conjugate pair per prime and a limited prime range.
-    The present paper reports the first systematic campaign computing $\dpair$ across
-    \emph{all} $(q-1)/2$ conjugate pairs $(c, q-c)$ for $q \in \{29, 61, 101, 151, 211\}$,
-    with $M = 50$ independent block samples per pair.
+    The present paper reports a systematic campaign computing $\dpair$ across the
+    $(q-1)/2$ conjugate pairs $(c, q-c)$, originally for $q \in \{29, 61, 101, 151, 211\}$ with
+    $M = 50$ block samples per pair, and here extended to $q \in \{307, 401, 601\}$ by a capped
+    breadth-first construction that reproduces the pair observable exactly at a fraction of the
+    cost (with reduced sampling: $M = 16$ at $q = 307$, $M = 8$ at $q = 401, 601$).
     Three results are established.
-    First, $\dpair(q)$ converges robustly: the inter-pair standard deviation decreases
-    from $0.54$ at $q = 29$ to $0.11$ at $q = 211$, confirming that $\dpair$ is a
+    First, $\dpair(q)$ converges robustly and concentrates across pairs, confirming that it is a
     structural invariant of the Weil representation rather than a block-level fluctuation.
-    Second, empirical fits of the form $\delta_\infty + a/\!\log q$ describe the data
-    excellently over the tested range, but carry no asymptotic meaning:
-    the leading finite-size correction is governed by the BFS window depth $n_1(q)$,
-    which satisfies $n_1(q) = \Theta(q)$ by the Window-Depth Theorem~\cite{Beau2026a13},
-    making the correction approximately constant in $\log q$ and rendering direct
-    extrapolation structurally degenerate.
-    Third, when the O14 normalization correction
-    $\eta\,\log q / \log n_1(q)$~\cite{Beau2026a18} is applied,
-    the corrected values $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ fall within
-    the admissible window $[7.4, 10.6]$ consistently across $q \in \{61, 101, 151, 211\}$.
-    This supports the interpretation that the apparent decrease of raw $\dpair(q)$ is a
-    finite-size normalization effect rather than a signal of asymptotic drift below the
-    admissible window.
-    The identification of the asymptotic value $\delta_\infty$ requires analytical control
-    of $n_1(q)/q$, identified here as the central open direction.
+    Second, and centrally, the extended campaign shows that the \emph{raw} exponent
+    $\delta_{\mathrm{global}}(q)$ descends monotonically into the admissible window $[7.4, 10.6]$
+    on its own, reaching $7.61$ at $q = 601$, without any finite-size correction; the O14
+    normalization correction~\cite{Beau2026a18}, needed to bring the small-$q$ values into the
+    window, becomes progressively unnecessary at large $q$ and eventually overcorrects, sending
+    the corrected quantity below the lower edge $7.4$.
+    The admissible-window agreement is therefore carried by the raw observable, not by the
+    corrected one.
+    Third, the asymptotic value $\delta_\infty$ remains insufficiently constrained by the
+    accessible range: competing convergence laws --- notably $1/q$ and $1/\sqrt{q}$ --- remain
+    statistically viable, so no single extrapolated $\delta_\infty$ is claimed.
+    As a secondary consequence, the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$
+    stays in the narrow interval $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$, consistent
+    with the O24 transfer analysis~\cite{Beau2026a28}.
 
     \medskip\noindent
     \textbf{Keywords.}
     Cosmochrony; spectral admissibility; pair-level observable; Weil representation;
     Heisenberg graphs; capacity exponent; convergence; inter-pair concentration;
-    normalization correction; window depth; BFS; asymptotic analysis
+    normalization correction; window depth; BFS; asymptotic analysis; large-prime extension
+
   \end{abstract}
 
   \clearpage
@@ -120,8 +122,10 @@
       \end{itemize}
 
       The paper does \emph{not} claim to identify the asymptotic value $\delta_\infty$.
-      Instead, it establishes why direct extrapolation in $q$ is structurally unreliable
-      and identifies the correct analytical target: the ratio $n_1(q)/q$.
+      Instead, it establishes why direct extrapolation in $q$ is structurally unreliable, and ---
+      through the large-prime extension of \S\ref{sec:ext} --- that the raw observable itself
+      descends into the admissible window, so the window agreement no longer relies on the
+      finite-size correction.
 
   \section{Setup and Protocol}
 
@@ -269,7 +273,97 @@
       The smallest prime for which a meaningful power-law fit exists is $q = 61$,
       where saturation occurs well after the fitting window and all 30 pairs converge.
       The physically relevant trend is the monotone decrease from $q = 61$ onward,
-      continuing without sign of stabilisation through $q = 211$.
+      continuing through $q = 211$ and, as shown next, into the admissible window itself.
+
+    \subsection{Extension to large primes ($q$ up to $601$)}
+      \label{sec:ext}
+
+      The campaign is extended to $q \in \{307, 401, 601\}$ by a capped breadth-first
+      construction.
+      Since the pair observable $\sigpair(n)$ in the fitting window depends only on the shells
+      $S_0, \ldots, S_n$ with $n \lesssim 1.1\sqrt{q}$, the full-graph exploration --- infeasible
+      at these primes --- is replaced by a breadth-first search capped at $\approx 1.6\sqrt{q}$
+      shells.
+      The capped shells are identical to the early full-graph shells, so the resulting
+      $\sigma_c(n)$ reproduces the production observable to machine precision (verified on
+      $q \in \{61, 101\}$, maximum absolute difference $0$).
+      Sampling is reduced to $M = 16$ (at $q = 307$, $24$ representative pairs) and $M = 8$
+      (at $q = 401, 601$, $12$ pairs).
+      The pair exponent is a grand-mean slope and only weakly sensitive to $M$: a fixed-pair
+      control at $q = 61$ gives a $+0.18$ shift at $M = 8$ relative to $M = 50$, i.e.\ the reduced
+      precision biases $\dpair$ slightly \emph{upward}, not downward, so it cannot manufacture the
+      descent reported below.
+
+      \begin{table}[h]
+        \centering
+        \begin{tabular}{rrrcrrrr}
+          \toprule
+          $q$ & $K$ & $M$ & window & $\delta_{\mathrm{global}}$ & $\dpairmean \pm \sigma_q$
+          & $\delta_{\mathrm{corr}}$ & $\bstar$ \\
+          \midrule
+          211 & 105 & 50 & $[3,14]$ & 8.760 & $8.784 \pm 0.109$ & 7.77 & 0.108 \\
+          307 & 24  & 16 & $[3,16]$ & 8.254 & $8.261 \pm 0.133$ & 7.23 & 0.114 \\
+          401 & 12  & 8  & $[4,17]$ & 8.085 & $8.090 \pm 0.214$ & 7.03 & 0.117 \\
+          601 & 12  & 8  & $[4,19]$ & 7.610 & $7.618 \pm 0.194$ & 6.53 & 0.123 \\
+          \bottomrule
+        \end{tabular}
+        \caption{Extended campaign (capped BFS).
+          $\delta_{\mathrm{global}}$: OLS exponent on the grand-mean $\sigpair$ trajectory over the
+          auto-calibrated window.
+          $\dpairmean \pm \sigma_q$: mean and inter-pair standard deviation; $\sigma_q$ at
+          $q = 401, 601$ is inflated by the reduced pair count $K = 12$ (versus $K = 105$ at
+          $q = 211$), not by a loss of concentration.
+          $\delta_{\mathrm{corr}} = \dpairmean - \tfrac12 \log q / \log n_1$ is the O14 correction
+          of~\eqref{eq:O14correction}.
+          $\bstar = 1/(\delta_{\mathrm{global}} + \tfrac12)$.
+          The $q = 211$ row (full-graph, $M = 50$) is repeated for reference.}
+        \label{tab:extended}
+      \end{table}
+
+      A knee-trimmed interior fit (dropping the two shells nearest saturation) with a bootstrap
+      over pairs gives $\delta_{\mathrm{int}}(601) = 7.60 \pm 0.05$, so the $q = 401 \to 601$
+      descent (\,$\approx 0.48$, some six bootstrap standard deviations\,) is a genuine feature,
+      not sampling noise.
+      Three readings follow, in decreasing order of robustness.
+      \begin{enumerate}[nosep]
+        \item \textbf{The raw exponent reaches the admissible window unaided.}
+          $\delta_{\mathrm{global}}(q)$ falls monotonically $8.76 \to 8.25 \to 8.09 \to 7.61$ over
+          $q = 211 \to 601$ and enters $[7.4, 10.6]$ at $q = 601$ with no correction applied.
+          This is the central empirical result of the extension.
+        \item \textbf{The O14 correction overcorrects at large $q$.}
+          The same correction that lifts the small-$q$ values into the window
+          (Table~\ref{tab:corrected}) drives the large-$q$ values \emph{below} it:
+          $\delta_{\mathrm{corr}} = 7.77 \to 7.23 \to 7.03 \to 6.53$.
+          The admissible-window agreement is thus carried by the raw observable, and the O14
+          finite-size correction is a small-$q$ adjustment that becomes unnecessary, and finally
+          detrimental, as $q$ grows.
+        \item \textbf{The asymptote is not pinned.}
+          Restricting to the asymptotic range $q \ge 101$, both a $1/q$ law
+          ($\delta_\infty \approx 7.1$) and a $1/\sqrt{q}$ law ($\delta_\infty \approx 5.4$) fit
+          within their uncertainties; the effective form lies between them and the present data do
+          not discriminate.
+          No single $\delta_\infty$ is therefore claimed (Figure~\ref{fig:scaling_ext}).
+      \end{enumerate}
+
+      \begin{figure}[t]
+        \centering
+        \includegraphics[width=\textwidth]{o25_scaling_extended}
+        \caption{Extended campaign.
+          Filled circles: raw $\delta_{\mathrm{global}}(q)$, descending into the admissible window
+          $[7.4, 10.6]$ (green band) and reaching $7.61$ at $q = 601$.
+          Grey squares: the O14-corrected $\delta_{\mathrm{corr}}$, which overshoots below the lower
+          edge at large $q$.
+          Dotted: $1/q$ and $1/\sqrt{q}$ fits on $q \ge 101$, both statistically viable,
+          illustrating that $\delta_\infty$ is not pinned.
+          The marker at $q = 211$ separates the original full-graph campaign from the capped-BFS
+          extension.}
+        \label{fig:scaling_ext}
+      \end{figure}
+
+      As a secondary consequence, the transfer parameter $\bstar = 1/(\dpair + \tfrac12)$ stays in
+      the narrow band $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$
+      (Table~\ref{tab:extended}); this is a stability observation consistent with the O24 transfer
+      analysis~\cite{Beau2026a28}, not a new determination of $\bstar$.
 
   \section{Structural Analysis: Why Extrapolation Fails}
 
@@ -349,6 +443,12 @@
       consistency test rather than a parameter-free prediction.
       The observation that it brings all four data points into the admissible window
       is consistent with this hypothesis but does not constitute a proof.
+      Moreover, the large-prime extension of \S\ref{sec:ext} shows that this correction is a
+      \emph{small-$q$} device: at $q \in \{307, 401, 601\}$ the raw exponent already lies in (or
+      descends into) the admissible window, while the same correction overshoots \emph{below} the
+      lower edge (Table~\ref{tab:extended}).
+      The window agreement is therefore ultimately carried by the raw observable, and the O14
+      correction is best read as a finite-size adjustment that becomes unnecessary at large $q$.
 
       \begin{figure}[t]
         \centering
@@ -384,7 +484,11 @@
           extrapolating to $5.66$ (below O24, reflecting the known negative bias of
           $\delta_{\mathrm{global}}$ relative to $\dpairmean$).
           Green band: admissible window $[7.4, 10.6]$ from O10.
-          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.}
+          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.
+          The single-form $1/\sqrt{q}$ extrapolation shown here (calibrated on $q \le 211$) is
+          \emph{not} a determination of $\delta_\infty$: the large-prime extension of
+          \S\ref{sec:ext} (Figure~\ref{fig:scaling_ext}) shows that $1/q$ and $1/\sqrt{q}$ laws
+          remain equally viable, so no single asymptote is claimed.}
         \label{fig:scaling}
       \end{figure}
 
@@ -434,32 +538,43 @@
         Direct extrapolation in $q$ cannot identify the asymptotic value;
         the correct analytical variable is $n_1(q)/q$, not $q$ itself.
 
-        \item \textbf{Consistency with the admissible window under O14 correction.}
-        When the normalization correction of O14 is applied, all four data points
-        at $q \in \{61, 101, 151, 211\}$ fall within $[7.4, 10.6]$.
-        This is consistent with the interpretation that the apparent decrease of raw
-        $\dpairmean(q)$ is a finite-size normalization effect.
+        \item \textbf{The raw observable reaches the admissible window; the O14 correction
+        becomes unnecessary.}
+        The extended campaign ($q$ up to $601$) shows that the raw exponent
+        $\delta_{\mathrm{global}}(q)$ descends into $[7.4, 10.6]$ on its own, reaching $7.61$ at
+        $q = 601$.
+        The O14 normalization correction, which lifts the small-$q$ values into the window,
+        becomes progressively unnecessary and eventually overcorrects at large $q$ (sending the
+        corrected quantity below $7.4$).
+        The admissible-window agreement is therefore carried by the raw observable rather than by
+        the corrected one --- a stronger statement than the earlier small-$q$ analysis, since it
+        removes an ingredient rather than adding one.
       \end{enumerate}
 
     \subsection{Relation to O24}
 
       O24~\cite{Beau2026a28} established the structural integrity of the chain
       $c_\chi \to \dpair \to \bstar$ unconditionally.
-      O25 provides the quantitative numerical content: it shows that the values of
-      $\dpair$ measured at accessible primes are consistent with the admissible window,
-      once the finite-size normalization structure is accounted for analytically.
-      The two papers together close the numerical open direction of the O-series at the
-      level of structural consistency.
+      O25 provides the quantitative numerical content: the extended campaign shows that the raw
+      $\dpair$ measured at large primes descends into the admissible window without correction,
+      and that the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$ stays in the
+      narrow band $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$ (Table~\ref{tab:extended}),
+      consistent with the O24 transfer analysis.
+      This is a stability observation, not a new determination of $\bstar$: since $\delta_\infty$
+      is not pinned, $\bstar$ inherits the same residual uncertainty.
+      The two papers together close the numerical open direction of the O-series at the level of
+      structural consistency.
 
     \subsection{What remains open}
 
       The following directions are explicitly open:
       \begin{itemize}
         \item Analytical derivation of the asymptotic ratio $n_1(q)/q$ as $q \to \infty$.
-        \item Verification of the O14 hypothesis $\eta = 1/2$ in the exact O25 pipeline
-        setting.
-        \item Extension of the campaign to $q = 307$ and beyond, to further constrain the
-        rate of convergence of $n_1(q)/q$.
+        \item Verification of the O14 hypothesis $\eta = 1/2$: the extension shows it overcorrects
+        at large $q$, so the exact finite-size form (rather than the value $\eta = 1/2$) is the
+        open question.
+        \item Discrimination of the finite-size convergence form ($1/q$ vs $1/\sqrt{q}$), which
+        the present range $q \le 601$ does not resolve; this likely requires $q \gtrsim 10^3$.
         \item Execution of O26 Test~4 (effective dimension $r_{\mathrm{eff}} = d_\rho^2$
         of the covariance trajectory).
         A partial numerical implementation of the canonical embedding
@@ -476,24 +591,23 @@
 
   \section{Conclusion}
 
-    The convergence of $\dpair(q)$ is robust and the inter-pair concentration is
-    strong, confirming that $\dpair$ is a structural invariant of the admissibility
-    programme.
-    The raw sequence $\dpairmean(q)$ decreases monotonically from $q = 61$ to $q = 211$
-    without sign of stabilisation; this continuing decrease does not, however, signal
-    asymptotic drift below the admissible window, but reflects the $q$-dependent
-    normalization correction identified in O14.
-    Empirical fits in $q$ provide excellent descriptions of the data but carry no
-    asymptotic meaning, because the leading finite-size correction behaves as
-    $\log q/\log n_1(q) \approx 1$ over the accessible range: the correct asymptotic
-    variable is the BFS window depth $n_1(q)$, not $q$ itself.
-    When the O14 normalization correction is applied, the corrected values
-    $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$ are consistent with an asymptotic
-    value in the admissible window $[7.4, 10.6]$, but do not uniquely determine it,
-    for all tested primes $q \in \{61, 101, 151, 211\}$.
-    The identification of $\delta_\infty$ therefore requires analytical control of the
-    ratio $n_1(q)/q$, which is identified as the central open direction for subsequent
-    work.
+    The convergence of $\dpair(q)$ is robust and the inter-pair concentration is strong,
+    confirming that $\dpair$ is a structural invariant of the admissibility programme.
+    The central result of the extended campaign is that the \emph{raw} exponent
+    $\delta_{\mathrm{global}}(q)$ descends monotonically into the admissible window $[7.4, 10.6]$
+    on its own, reaching $7.61$ at $q = 601$, with no finite-size correction applied.
+    The O14 normalization correction --- required to bring the small-$q$ values into the window ---
+    becomes progressively unnecessary and eventually overcorrects at large $q$, driving the
+    corrected quantity below the lower edge; the admissible-window agreement is therefore carried
+    by the raw observable, not by the corrected one.
+    The asymptotic value $\delta_\infty$ remains insufficiently constrained by the accessible
+    range: $1/q$ and $1/\sqrt{q}$ convergence laws are both statistically viable, so no single
+    $\delta_\infty$ is claimed, and the discrimination of the finite-size form is left as the open
+    numerical direction (likely requiring $q \gtrsim 10^3$).
+    As a secondary consequence, the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$
+    stays in the narrow interval $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$, consistent
+    with the O24 transfer analysis but inheriting the same residual uncertainty as
+    $\delta_\infty$.
 
   \section*{Data and code availability}
 
@@ -504,6 +618,12 @@
     \href{https://doi.org/10.5281/zenodo.18292335}{10.5281/zenodo.18292335}.
     The extended M=20 run checkpoint files and the figure \texttt{o25\_scaling.pdf}
     are included in the same deposit.
+    The large-prime extension of \S\ref{sec:ext} uses the capped-BFS campaign
+    \texttt{delta\_pair\_convergence\_campaign.py} (resumable, live ETA), the convergence analysis
+    \texttt{delta\_pair\_analysis.py} (knee-trimmed interior fit, $1/q$-vs-$1/\sqrt{q}$ scan,
+    bootstrap), and the checkpoints \texttt{dpc\_q\{307,401,601\}.npz}, all in
+    \texttt{simulation/spectral/o25}; the capped construction reuses
+    \texttt{n1\_resumable.build\_bfs} and reproduces \texttt{compute\_block\_capacity} exactly.
 
   \section*{Acknowledgements}
 
