@@ -33,7 +33,7 @@ Once this is accounted for, all values are consistent with the expected range.
 - the exponent $\delta_{\mathrm{pair}} \approx 7.44$ lies within the admissible window  
   $[7.4, 10.6]$
 - the transfer chain  
-  $c_\chi \to \delta_{\mathrm{pair}} \to \beta^*$  
+  $c_{\mathrm{BI}} \to \delta_{\mathrm{pair}} \to \beta^*$  
   holds unconditionally (**O24**)
 
 However:
