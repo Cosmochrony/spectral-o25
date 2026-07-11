@@ -509,7 +509,7 @@ if __name__ == "__main__":
     main()
 
 #
-# Since c_chi and lambda_rho are not yet independently fixed in the
+# Since c_BI and lambda_rho are not yet independently fixed in the
 # O-series pipeline, this script operates in two modes:
 #
 #   Mode A (relative) : n* = first n where sigma_pair(n) < threshold_rel
