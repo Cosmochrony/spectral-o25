@@ -1,6 +1,6 @@
 This repository contains the source of the **O25 Cosmochrony paper**  
-[*Systematic Pair-Level Campaign for δpair:
-Convergence, Inter-Pair Concentration, and Normalization Structure*](out/SpectralO25.pdf).
+*Systematic Pair-Level Campaign for δpair:
+Convergence, Inter-Pair Concentration, and Normalization Structure*.
 
 This work extends the **spectral admissibility sub-programme** by providing
 the first **systematic numerical validation of the pair observable**
