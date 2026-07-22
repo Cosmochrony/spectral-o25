@@ -13,16 +13,16 @@ It addresses the final numerical question left open after **O24**:
 
 ## Quick Summary
 
-δpair does not vary across primes.
-
-The apparent drift comes from finite-size effects in the observable:
-measurements are controlled by a BFS window whose depth is not yet asymptotic.
+At fixed $q$, the pair observable concentrates strongly across conjugate pairs.
+Across primes, its fitted exponent drifts over the accessible finite windows, and the
+available data do not identify a unique asymptote.
 
 As a result, standard extrapolations in q are structurally misleading.
 
-The correct scaling variable is not q, but n₁(q)/q.
+The candidate finite-window control variable is $n_1(q)/q$ rather than $q$ alone.
 
-Once this is accounted for, all values are consistent with the expected range.
+The raw large-$q$ values enter the historical phenomenological window, while the
+earlier O14 correction eventually overcorrects.
 
 ## Context
 
@@ -30,11 +30,15 @@ Once this is accounted for, all values are consistent with the expected range.
 
 - the physically relevant observable is the canonical pair-level quantity  
   $\sigma_{\mathrm{pair}}^{\mathrm{can}}(n)$
-- the exponent $\delta_{\mathrm{pair}} \approx 7.44$ lies within the admissible window  
+- the reference value $\delta_{\mathrm{pair}} \approx 7.44$ lies within the historical
+  phenomenological window
   $[7.4, 10.6]$
-- the transfer chain  
-  $c_{\mathrm{BI}} \to \delta_{\mathrm{pair}} \to \beta^*$  
-  holds unconditionally (**O24**)
+- vertical fibre structure does not change the observable rank (**O24**)
+
+The further map
+$\beta^*=1/(\delta_{\mathrm{pair}}+1/2)$ is not a native Heisenberg law: it imports a
+changing-degree LPS growth equation into the fixed-degree Heisenberg cascade. O25 therefore
+retains values produced by that reciprocal only as phenomenological diagnostics.
 
 However:
 
@@ -49,16 +53,16 @@ This defines the scope of **O25**.
 
 The paper establishes that:
 
-> The apparent variability of δpair across primes is not physical,
-> but a finite-size normalization effect controlled by the BFS window depth.
+> The pair statistic concentrates at fixed $q$, while its cross-prime drift remains
+> entangled with estimator and BFS-window effects.
 
 Three key results are obtained:
 
-- **convergence** of δpair(q) across primes
-- **inter-pair concentration** → δpair is a structural invariant
+- **reproducible extraction** of δpair(q) across primes
+- **inter-pair concentration** → δpair is a stable fixed-$q$ pair statistic
 - **non-identifiability of δ∞** via naive extrapolation in q
 
-The correct asymptotic variable is identified as:
+The candidate variable controlling the finite-window analysis is:
 
 $$
 \frac{n_1(q)}{q}
@@ -70,21 +74,22 @@ not q itself.
 
 ### 1. Inter-pair concentration
 
-*Result.* The variance of δpair across conjugate pairs vanishes with q.
+*Result.* The variance of δpair across conjugate pairs decreases over the sampled primes.
 
 Thus:
 
-- δpair is not a block-dependent quantity
-- it is a **structural invariant of the Weil representation**
+- δpair is not dominated by the choice of conjugate pair at fixed $q$
+- the concentration is compatible with O24 rank stability
 
-### 2. Convergence of δpair(q)
+### 2. Cross-prime drift of δpair(q)
 
-*Result.* The sequence $\bar{\delta}_{\mathrm{pair}}(q)$ stabilises with q.
+*Result.* The sequence $\bar{\delta}_{\mathrm{pair}}(q)$ is reproducibly measured but
+does not determine a unique asymptote on the accessible prime range.
 
 Thus:
 
-- fluctuations observed in earlier works were finite-sample effects
-- convergence is robust across all pairs
+- pair-to-pair fluctuations shrink over the sampled range
+- the cross-prime asymptote remains unresolved
 
 ### 3. Degeneracy of empirical fits
 
@@ -132,27 +137,24 @@ with $\eta = 1/2$ yields:
 
 - $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$
 
-Thus:
+This small-$q$ endpoint diagnostic was historically consistent with the phenomenological
+window. The large-$q$ extension shows that it eventually overcorrects, so it is not a native
+exponent conversion and does not establish that the drift is purely a normalization artefact.
 
-- all corrected values fall within the admissible window
-- the apparent downward drift is a normalization artefact
+### 6. Candidate asymptotic variable
 
-### 6. Identification of the correct asymptotic variable
-
-*Result.* The controlling quantity is:
+*Diagnostic.* The quantity to track is:
 
 $$
 \frac{n_1(q)}{q}
 $$
 
-Thus:
-
-- q is not the correct scaling parameter
-- convergence is governed by BFS window depth
+Thus the BFS window depth must be tracked explicitly; the present finite range does not
+prove a unique asymptotic scaling law.
 
 ## Foundational Chain from the Substrate
 
-The derivation is fully internal:
+The observable-side chain is internal:
 
 Born–Infeld admissibility  
 $\to$ canonical pair observable (O16–O21)  
@@ -163,7 +165,8 @@ $\to$ pair-level numerical convergence (O25)
 $\to$ normalization structure  
 $\to$ identification of asymptotic variable
 
-No external fitting assumption is required.
+No external fitting assumption is required for the reported pair statistics.
+This chain does not derive the separate LPS-to-Heisenberg capacity-to-rate transfer.
 
 ## Mathematical Role of O25
 
@@ -174,7 +177,7 @@ No external fitting assumption is required.
 - it explains the instability observed in O12–O13
 - it identifies the structural origin of finite-size effects
 - it invalidates naive extrapolation in q
-- it isolates the correct asymptotic variable
+- it isolates the candidate finite-window control variable
 
 More precisely, the paper:
 
@@ -183,7 +186,7 @@ More precisely, the paper:
 - establishes convergence and variance collapse
 - proves degeneracy of empirical fits
 - derives the normalization correction mechanism
-- identifies $n_1(q)/q$ as the controlling quantity
+- identifies $n_1(q)/q$ as the quantity to test in a future asymptotic analysis
 
 ## Epistemic Structure of the Paper
 
@@ -217,7 +220,7 @@ More precisely, the paper:
 The conceptual shift is decisive:
 
 - previous view: δpair varies with q
-- O25: δpair is stable, variation is artefactual
+- O25: the fixed-$q$ pair statistic concentrates, while cross-prime variation remains unresolved
 
 Thus:
 
@@ -244,18 +247,18 @@ The key insight is:
 Thus:
 
 - the observable is validated
-- the variability is explained
+- the finite-window variability is quantified
 - the asymptotic obstruction is identified
-- the correct scaling variable is isolated
+- a candidate scaling variable is isolated
 
 ## What O25 Adds
 
 - full pair-level numerical validation
 - inter-pair concentration
-- explanation of δ instability
+- quantification of δ instability
 - structural origin of finite-size corrections
 - degeneracy of extrapolation
-- identification of the true asymptotic variable
+- identification of the candidate finite-window control variable
 
 ## Outcome
 
@@ -264,9 +267,10 @@ The spectral admissibility framework is now:
 - structurally grounded (**O24**)
 - numerically validated (**O25**)
 - normalization-aware
-- asymptotically well-posed (at the structural level)
+- explicit about its unresolved asymptotic regime
 
-The remaining task is now purely analytical.
+The remaining tasks include an asymptotic analysis of the estimator and any future native
+growth law; the legacy reciprocal is not an available closure.
 
 ## Residual Open Problems
 

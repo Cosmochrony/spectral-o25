@@ -12,6 +12,8 @@
 \usepackage{enumitem}
 \usepackage{doi}
 
+\setlength{\emergencystretch}{3em}
+
 
 % Theorem environments
 
@@ -42,14 +44,16 @@
   \author{J\'er\^ome Beau\\[2pt]
   \small Independent Researcher\\
   \small \href{mailto:jerome.beau@cosmochrony.org}{jerome.beau@cosmochrony.org}}
-  \date{2026}
+  \date{2026\\[2pt]\small Version 1.3.3}
   \maketitle
 
   \begin{abstract}
-    The O-series establishes the transfer chain $c_{\mathrm{BI}} \to \dpair \to \bstar$
-    unconditionally with respect to the fibre structure of the non-injective
-    projection~$\Pi$~\cite{Beau2026a28}.
-    The value $\dpair \approx 7.44$ extracted in O16~\cite{Beau2026a20} was based on a
+    The O-series defines a canonical pair-level capacity observable and establishes that
+    vertical non-injectivity does not change its observable rank.
+    The further prescription $\bstar=1/(\dpair+\tfrac12)$, however, imports the
+    changing-degree LPS growth equation into a fixed-degree Heisenberg cascade and has no
+    native carrier there.
+    The value $\dpair \approx 7.44$ extracted in O16 was based on a
     single conjugate pair per prime and a limited prime range.
     The present paper reports a systematic campaign computing $\dpair$ across the
     $(q-1)/2$ conjugate pairs $(c, q-c)$, originally for $q \in \{29, 61, 101, 151, 211\}$ with
@@ -57,12 +61,12 @@
     breadth-first construction that reproduces the pair observable exactly at a fraction of the
     cost (with reduced sampling: $M = 16$ at $q = 307$, $M = 8$ at $q = 401, 601$).
     Three results are established.
-    First, $\dpair(q)$ converges robustly and concentrates across pairs, confirming that it is a
-    structural invariant of the Weil representation rather than a block-level fluctuation.
+    First, $\dpair(q)$ is extracted reproducibly and concentrates across pairs, confirming that it is a
+    stable fixed-$q$ pair statistic rather than a block-level fluctuation.
     Second, and centrally, the extended campaign shows that the \emph{raw} exponent
     $\delta_{\mathrm{global}}(q)$ descends monotonically into the admissible window $[7.4, 10.6]$
     on its own, reaching $7.61$ at $q = 601$, without any finite-size correction; the O14
-    normalization correction~\cite{Beau2026a18}, needed to bring the small-$q$ values into the
+    normalization correction, needed to bring the small-$q$ values into the
     window, becomes progressively unnecessary at large $q$ and eventually overcorrects, sending
     the corrected quantity below the lower edge $7.4$.
     The admissible-window agreement is therefore carried by the raw observable, not by the
@@ -70,9 +74,10 @@
     Third, the asymptotic value $\delta_\infty$ remains insufficiently constrained by the
     accessible range: competing convergence laws --- notably $1/q$ and $1/\sqrt{q}$ --- remain
     statistically viable, so no single extrapolated $\delta_\infty$ is claimed.
-    As a secondary consequence, the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$
-    stays in the narrow interval $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$, consistent
-    with the O24 transfer analysis~\cite{Beau2026a28}.
+    For comparison only, applying the legacy reciprocal map
+    $\bstar = 1/(\dpair + \tfrac12)$ produces the narrow interval $0.108$--$0.123$ across
+    $q \in \{211, \dots, 601\}$.  This is a phenomenological numerical coincidence, not a
+    Heisenberg capacity-to-rate inference.
 
     \medskip\noindent
     \textbf{Keywords.}
@@ -100,8 +105,10 @@
       \end{equation}
       with capacity exponent $\dpair \approx 7.44$ consistent with the phenomenological
       target $\dpair \in [7.4, 10.6]$.
-      The transfer chain $c_{\mathrm{BI}} \to \dpair \to \bstar$ was established unconditionally
-      with respect to the fibre structure of~$\Pi$ in O24~\cite{Beau2026a28}.
+      O24 proves that vertical fibre structure does not perturb the observable rank entering
+      $\dpair$~\cite{Beau2026a28}.  It does not supply the missing growth carrier needed to infer
+      $\bstar$: the O4--O6 equation and the Heisenberg capacity observable live on different
+      substrates~\cite{Beau2026sgn}.
 
       The remaining open direction identified in O24 Section~5.1 is the extended numerical
       campaign at large primes across multiple conjugate pairs.
@@ -126,6 +133,8 @@
       through the large-prime extension of \S\ref{sec:ext} --- that the raw observable itself
       descends into the admissible window, so the window agreement no longer relies on the
       finite-size correction.
+      Throughout this paper, that window is retained as a historical phenomenological comparison;
+      it is not evidence for the refuted Heisenberg capacity-to-rate transfer.
 
   \section{Setup and Protocol}
 
@@ -153,6 +162,10 @@
         \item Set $\sigpair(n) = \sigma_c(n)\,\sigma_{q-c}(n)$.
         \item Extract $\dpair$ by OLS regression of $\log \sigpair(n)$ vs
         $\log(n+1)$ over the fitting window $[n_0, n_1]$ (O16 convention).
+        These reported exponents retain that frozen estimator convention.  Regressing against
+        $\log n$, as in the paper-level power-law definition, lowers the fitted exponent by
+        approximately $8$--$13\%$ on the relevant finite windows~\cite{Beau2026sgn}; this
+        estimator effect does not alter the concentration results below.
       \end{enumerate}
 
     \subsection{Fitting window and BFS parameters}
@@ -233,11 +246,11 @@
       $\sigma_q \in \{0.539, 0.259, 0.161, 0.139, 0.109\}$ for
       $q \in \{29, 61, 101, 151, 211\}$.
       The coefficient of variation drops from $6.1\%$ to $1.2\%$.
-      This concentration confirms that $\dpair$ is a structural invariant of the
-      Weil representation on $\Heis$, as predicted by the verticality theorem of
-      O24~\cite{Beau2026a28}: the fibre structure of~$\Pi$ cannot perturb the
-      observable rank, so inter-pair variance is purely a sampling effect that
-      vanishes as $M \to \infty$.
+      This concentration establishes a stable fixed-$q$ pair statistic of the
+      Weil representation on $\Heis$ and is compatible with the verticality theorem of
+      O24~\cite{Beau2026a28}.  The theorem excludes rank changes induced by vertical fibre
+      structure; it does not by itself prove that all remaining inter-pair variance is sampling
+      noise or that the statistic is independent of~$q$.
 
       \begin{figure}[t]
         \centering
@@ -360,10 +373,11 @@
         \label{fig:scaling_ext}
       \end{figure}
 
-      As a secondary consequence, the transfer parameter $\bstar = 1/(\dpair + \tfrac12)$ stays in
-      the narrow band $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$
-      (Table~\ref{tab:extended}); this is a stability observation consistent with the O24 transfer
-      analysis~\cite{Beau2026a28}, not a new determination of $\bstar$.
+      As a legacy diagnostic, the numerical image
+      $1/(\dpair + \tfrac12)$ stays in the narrow band $0.108$--$0.123$ across
+      $q \in \{211, \dots, 601\}$ (Table~\ref{tab:extended}).  Since the reciprocal map is not
+      natively derived on the Heisenberg substrate~\cite{Beau2026sgn}, this stability is not a
+      determination of $\bstar$.
 
   \section{Structural Analysis: Why Extrapolation Fails}
 
@@ -389,7 +403,7 @@
       The obstruction to extrapolation is not numerical precision,
       but the internal normalization geometry of the observable.
 
-    \subsection{The leading correction behaves as $\log q / \log n_1(q) \approx 1$}
+    \subsection{Leading finite-window correction}
 
       The observable $\sigma_c(n)$ is normalised by $|S_n|$, whose growth in the
       pre-saturation window $[n_0, n_1]$ is not yet in the asymptotic Bass--Guivarc'h
@@ -479,12 +493,12 @@
           error bars.
           Dashed red: fit $\dpairmean \approx 7.32 + 22.0/\sqrt{q}$,
           extrapolating to $\hat{\delta}_\infty = 7.32$, within $0.12$ of the
-          O24 prediction of $7.44$.
+          historical reference value $7.44$.
           Dashed blue: fit $\delta_{\mathrm{global}} \approx 5.66 + 46.2/\sqrt{q}$,
           extrapolating to $5.66$ (below O24, reflecting the known negative bias of
           $\delta_{\mathrm{global}}$ relative to $\dpairmean$).
           Green band: admissible window $[7.4, 10.6]$ from O10.
-          Green dashed: O24 prediction $\delta_{\mathrm{pair}} \approx 7.44$.
+          Green dashed: historical reference value $\delta_{\mathrm{pair}} \approx 7.44$.
           The single-form $1/\sqrt{q}$ extrapolation shown here (calibrated on $q \le 211$) is
           \emph{not} a determination of $\delta_\infty$: the large-prime extension of
           \S\ref{sec:ext} (Figure~\ref{fig:scaling_ext}) shows that $1/q$ and $1/\sqrt{q}$ laws
@@ -496,8 +510,11 @@
 
     The analysis of Section~4 identifies the ratio $n_1(q)/q$ as the key quantity
     controlling convergence.
-    From Table~\ref{tab:params}: $n_1(q)/q \in \{0.138, 0.131, 0.109, 0.086, 0.066\}$ for
-    $q \in \{29, 61, 101, 151, 211\}$.
+    From Table~\ref{tab:params},
+    \begin{align*}
+      n_1(q)/q &\in \{0.138, 0.131, 0.109, 0.086, 0.066\},\\
+      q &\in \{29, 61, 101, 151, 211\}.
+    \end{align*}
     The ratio is \emph{decreasing}, not yet constant.
     This means the system is not in the asymptotic regime $n_1 \sim \alpha q$ for
     any fixed constant $\alpha$, and the correction of Section~4.2 is itself
@@ -509,7 +526,7 @@
       \item If $n_1(q) = \alpha q + O(q^\beta)$ with $\beta < 1$, what is the resulting
       correction to $\dpairmean(q)$ at next-to-leading order?
     \end{enumerate}
-    Answering these questions would allow an analytical prediction of $\delta_\infty$
+    Answering these questions would help constrain $\delta_\infty$
     from the structure of $\Heis$, independently of numerical extrapolation.
     This also provides a structural explanation for the long-standing instability of
     $\dpair$ estimates across primes observed since O12--O13~\cite{Beau2026a16,Beau2026a17}:
@@ -524,19 +541,19 @@
 
       \begin{enumerate}
         \item \textbf{Numerical robustness.}
-        $\dpair(q)$ converges and the inter-pair variance decreases strongly with $q$.
+        $\dpair(q)$ is extracted reproducibly and the inter-pair variance decreases strongly with $q$.
         At $q = 211$, the coefficient of variation is $1.2\%$ over 105 pairs with $M = 50$
         samples each.
         The decrease of $\sigma_q$ is strictly monotone across all five primes with no
         sign of a plateau, strengthening the evidence that $\dpair$ is a structural
         invariant of the Weil representation.
-        This confirms the structural prediction of O24~\cite{Beau2026a28}.
+        This is compatible with the rank-stability result of O24~\cite{Beau2026a28}.
 
         \item \textbf{Structural non-identifiability of $\delta_\infty$ by extrapolation.}
         The leading finite-size correction behaves as $\log q/\log n_1(q) \approx 1$,
         making all empirical fits degenerate over the accessible range.
         Direct extrapolation in $q$ cannot identify the asymptotic value;
-        the correct analytical variable is $n_1(q)/q$, not $q$ itself.
+        the candidate analytical variable to test is $n_1(q)/q$, not $q$ alone.
 
         \item \textbf{The raw observable reaches the admissible window; the O14 correction
         becomes unnecessary.}
@@ -551,21 +568,20 @@
         removes an ingredient rather than adding one.
       \end{enumerate}
 
-    \subsection{Relation to O24}
+    \subsection{Relation to O24 and the transfer no-go}
 
-      O24~\cite{Beau2026a28} established the structural integrity of the chain
-      $c_{\mathrm{BI}} \to \dpair \to \bstar$ unconditionally with respect to the fibre structure
-      of~$\Pi$; the O4--O6 growth-equation closure and coupling hypotheses, the Weil realisation,
-      and the power-law regime remain its standing structural conditions.
+      O24~\cite{Beau2026a28} established a fibre-side result: vertical non-injectivity preserves
+      the observable rank.  That theorem remains intact.  It does not establish the full chain
+      $c_{\mathrm{BI}} \to \dpair \to \bstar$ because the O4--O6 growth equation is native to a
+      changing-degree LPS family, whereas $\dpair$ is measured on a fixed-degree Heisenberg
+      cascade.  The missing cross-substrate identification is refuted for the two native
+      realisations present in the frozen corpus~\cite{Beau2026sgn}.
       O25 provides the quantitative numerical content: the extended campaign shows that the raw
       $\dpair$ measured at large primes descends into the admissible window without correction,
-      and that the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$ stays in the
-      narrow band $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$ (Table~\ref{tab:extended}),
-      consistent with the O24 transfer analysis.
-      This is a stability observation, not a new determination of $\bstar$: since $\delta_\infty$
-      is not pinned, $\bstar$ inherits the same residual uncertainty.
-      The two papers together close the numerical open direction of the O-series at the level of
-      structural consistency.
+      Applying the former reciprocal prescription to those measurements gives the narrow band
+      $0.108$--$0.123$ (Table~\ref{tab:extended}), but only as a phenomenological diagnostic.
+      The pair campaign closes its numerical concentration target; it does not close a native
+      capacity-to-rate transfer.
 
     \subsection{What remains open}
 
@@ -593,8 +609,9 @@
 
   \section{Conclusion}
 
-    The convergence of $\dpair(q)$ is robust and the inter-pair concentration is strong,
-    confirming that $\dpair$ is a structural invariant of the admissibility programme.
+    The extraction of $\dpair(q)$ is robust and the inter-pair concentration is strong,
+    establishing that $\dpair$ is a concentrated fixed-$q$ pair statistic of the admissibility
+    programme.
     The central result of the extended campaign is that the \emph{raw} exponent
     $\delta_{\mathrm{global}}(q)$ descends monotonically into the admissible window $[7.4, 10.6]$
     on its own, reaching $7.61$ at $q = 601$, with no finite-size correction applied.
@@ -606,10 +623,11 @@
     range: $1/q$ and $1/\sqrt{q}$ convergence laws are both statistically viable, so no single
     $\delta_\infty$ is claimed, and the discrimination of the finite-size form is left as the open
     numerical direction (likely requiring $q \gtrsim 10^3$).
-    As a secondary consequence, the inferred transfer parameter $\bstar = 1/(\dpair + \tfrac12)$
-    stays in the narrow interval $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$, consistent
-    with the O24 transfer analysis but inheriting the same residual uncertainty as
-    $\delta_\infty$.
+    Applying the legacy reciprocal expression $1/(\dpair + \tfrac12)$ yields
+    $0.108$--$0.123$ across $q \in \{211, \dots, 601\}$, but the Heisenberg
+    capacity-to-rate transfer required to interpret this image as $\bstar$ is not natively
+    available.  The numerical interval is therefore retained only as a phenomenological
+    comparison~\cite{Beau2026sgn}.
 
   \section*{Data and code availability}
 
@@ -621,16 +639,16 @@
     The extended M=20 run checkpoint files and the figure \texttt{o25\_scaling.pdf}
     are included in the same deposit.
     The large-prime extension of \S\ref{sec:ext} uses the capped-BFS campaign
-    \texttt{delta\_pair\_convergence\_campaign.py} (resumable, live ETA), the convergence analysis
-    \texttt{delta\_pair\_analysis.py} (knee-trimmed interior fit, $1/q$-vs-$1/\sqrt{q}$ scan,
+    \path{delta_pair_convergence_campaign.py} (resumable, live ETA), the convergence analysis
+    \path{delta_pair_analysis.py} (knee-trimmed interior fit, $1/q$-vs-$1/\sqrt{q}$ scan,
     bootstrap), and the checkpoints \texttt{dpc\_q\{307,401,601\}.npz}, all in
-    \texttt{simulation/spectral/o25}; the capped construction reuses
-    \texttt{n1\_resumable.build\_bfs} and reproduces \texttt{compute\_block\_capacity} exactly.
+    \path{simulation/spectral/o25}; the capped construction reuses
+    \path{n1_resumable.build_bfs} and reproduces \path{compute_block_capacity} exactly.
 
   \section*{Acknowledgements}
 
     The author thanks the extended discussions within the Cosmochrony programme
-    that shaped the identification of $n_1(q)/q$ as the central asymptotic variable.
+    that shaped the identification of $n_1(q)/q$ as a candidate asymptotic variable.
     AI-assisted tools were used during the preparation of this work.
     All scientific content, results, and conclusions are the sole responsibility
     of the author.
