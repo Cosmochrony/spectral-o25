@@ -159,7 +159,7 @@ The observable-side chain is internal:
 Born–Infeld admissibility  
 $\to$ canonical pair observable (O16–O21)  
 $\to$ projection locking (O22)  
-$\to$ quaternionic maximality (O23)  
+$\to$ conditional rank-three carrier (O23 Theorem 3.1, supplied spinor carrier)  
 $\to$ rank stability (O24)  
 $\to$ pair-level numerical convergence (O25)  
 $\to$ normalization structure  
@@ -194,7 +194,7 @@ More precisely, the paper:
 
 - canonical pair observable (**O16–O21**)
 - projection locking (**O22**)
-- quaternionic maximality (**O23**)
+- conditional rank-three carrier (**O23** Theorem 3.1, supplied spinor carrier)
 - rank invariance (**O24**)
 - normalization correction (**O14**)
 - Heisenberg/Weil pipeline
@@ -237,10 +237,10 @@ The key insight is:
 **O25** completes the sequence:
 
 - **O16**: pair observable
-- **O17–O19**: fibre structure and normalization
+- **O17–O19**: conjugation identity and normalization (fibre identification open, O18)
 - **O20–O21**: persistence and intrinsic saturation
 - **O22**: projection locking
-- **O23**: quaternionic threshold
+- **O23**: conditional threshold dimension (supplied carrier)
 - **O24**: rank stability
 - **O25**: numerical convergence and asymptotic structure
 
