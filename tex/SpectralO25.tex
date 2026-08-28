@@ -5,12 +5,33 @@
 
 \documentclass[11pt,a4paper]{article}
 
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb,amsthm}
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{enumitem}
 \usepackage{doi}
+
+\input{glyphtounicode}
+\pdfgentounicode=1
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=black,
+  pdftitle={Systematic Pair-Level Campaign for δpair: Convergence, Inter-Pair Concentration,
+    and Normalization Structure},
+  pdfauthor={J\'{e}r\^{o}me Beau},
+  pdfsubject={Convergence, inter-pair concentration and normalization structure of the pair-level
+    capacity exponent on Heisenberg Cayley graphs},
+  pdfkeywords={Cosmochrony, spectral admissibility, pair-level observable, Weil representation,
+    Heisenberg graphs, capacity exponent, convergence, inter-pair concentration, normalization
+    correction, window depth, BFS, asymptotic analysis, large-prime extension}
+}
 
 \setlength{\emergencystretch}{3em}
 
@@ -44,7 +65,7 @@
   \author{J\'er\^ome Beau\\[2pt]
   \small Independent Researcher\\
   \small \href{mailto:jerome.beau@cosmochrony.org}{jerome.beau@cosmochrony.org}}
-  \date{2026\\[2pt]\small Version 1.4}
+  \date{2026\\[2pt]\small Version 1.5}
   \maketitle
 
   \begin{abstract}
@@ -596,9 +617,10 @@
         the present range $q \le 601$ does not resolve; this likely requires $q \gtrsim 10^3$.
         \item Execution of O26 Test~4 (effective dimension $r_{\mathrm{eff}} = d_\rho^2$
         of the covariance trajectory).
-        A partial numerical implementation of the canonical embedding
-        $\Phi_{q,\rho} = \rho \circ \iota \circ \pi$ (proved unconditionally in
-        O27~\cite{Beau2026a31}) was carried out on O25 data at $q \in \{29, 61\}$.
+        A partial numerical implementation of the canonical construction
+        $\Phi_{q,\rho} = \rho \circ \iota \circ \pi$ of O27~\cite{Beau2026a31}, which that paper
+        defines under a supplied carrier rather than deriving it from its constraints, was carried
+        out on O25 data at $q \in \{29, 61\}$.
         The current approximation of $\pi$ by the leading Gram--Schmidt basis vectors
         yields $r_{\mathrm{eff}} = 2$ universally, an artefact of the DC mode dominating
         the projection; the correct implementation requires restricting the ADE
