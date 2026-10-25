@@ -43,6 +43,12 @@ THRESHOLD_ABS = 1e-3  # absolute floor (avoids numerical noise)
 # Minimum BFS depth before we start tracking crossings
 N_BURN_IN = 2
 
+# Regression tolerance: a step counts as a regression only if
+# I(n) - I(n+1) > REGRESSION_REL_TOL * I_max, where I_max is the plateau
+# (maximum post-burn-in) value of the trace.  Exact decreases are reported
+# separately, so both the exact and the tolerance tests are visible.
+REGRESSION_REL_TOL = 1e-6
+
 # ---------------------------------------------------------------------------
 # NPZ loading
 # ---------------------------------------------------------------------------
@@ -95,7 +101,8 @@ def cumulative_capacity(sigma_traces: np.ndarray) -> np.ndarray:
 
 
 def analyze_stability(sigma_traces: np.ndarray, depths: np.ndarray,
-                      n_burn_in: int = N_BURN_IN) -> dict:
+                      n_burn_in: int = N_BURN_IN,
+                      rel_tol: float = REGRESSION_REL_TOL) -> dict:
     """Analyze monotonicity and regression of I(n) per pair.
 
     I(n) = sigma_pair(0) - sigma_pair(n) is the cumulative projected
@@ -135,7 +142,19 @@ def analyze_stability(sigma_traces: np.ndarray, depths: np.ndarray,
     monotone_fraction = (total_steps - total_decreases) / total_steps \
                         if total_steps > 0 else float("nan")
 
+    # Tolerance test: decreases larger than rel_tol * plateau value
+    I_max = I_burn.max(axis=1, keepdims=True)
+    tol_decreases = (-diffs) > rel_tol * I_max
+    n_tol_regressions = int(tol_decreases.any(axis=1).sum())
+    tol_monotone_fraction = (total_steps - int(tol_decreases.sum())) / total_steps \
+                            if total_steps > 0 else float("nan")
+    max_rel_decrease = float(np.max(-diffs / I_max)) if total_steps > 0 else 0.0
+
     return {
+        "n_tol_regressions": n_tol_regressions,
+        "tol_monotone_fraction": tol_monotone_fraction,
+        "max_rel_decrease": max_rel_decrease,
+        "max_abs_decrease": float(max(0.0, -diffs.min())) if total_steps > 0 else 0.0,
         "n_pairs": n_pairs,
         "n_steps": n_steps,
         "n_regressions": n_regressions,
@@ -153,7 +172,8 @@ def analyze_stability(sigma_traces: np.ndarray, depths: np.ndarray,
 
 def analyze_mean_monotonicity(sigma_mean: np.ndarray,
                               depths: np.ndarray,
-                              n_burn_in: int = N_BURN_IN) -> dict:
+                              n_burn_in: int = N_BURN_IN,
+                              rel_tol: float = REGRESSION_REL_TOL) -> dict:
     """Check monotonicity of I_mean(n) = sigma_pair_mean(0) - sigma_pair_mean(n).
 
     This is the mean cumulative projected capacity across all pairs.
@@ -164,7 +184,10 @@ def analyze_mean_monotonicity(sigma_mean: np.ndarray,
     diffs = np.diff(trace)
     n_decreases = int(np.sum(diffs < 0))
     max_decrease = float(np.min(diffs)) if len(diffs) > 0 else 0.0
+    n_tol_decreases = int(np.sum((-diffs) > rel_tol * trace.max())) if len(diffs) > 0 else 0
     return {
+        "n_tol_decreases": n_tol_decreases,
+        "is_tol_monotone": n_tol_decreases == 0,
         "I_mean": I_mean,
         "n_steps": len(diffs),
         "n_decreases": n_decreases,
@@ -262,6 +285,8 @@ def main():
                         help="Output directory for plots and summary")
     parser.add_argument("--burn-in", type=int, default=N_BURN_IN,
                         help="Minimum BFS depth before tracking (default: 2)")
+    parser.add_argument("--rel-tol", type=float, default=REGRESSION_REL_TOL,
+                        help="Relative regression tolerance (default: 1e-6 of the plateau value)")
     args = parser.parse_args()
 
     npz_dir = Path(args.npz_dir)
@@ -271,7 +296,7 @@ def main():
     print(f"\n{'='*60}")
     print(f"  O-series mode stability diagnostic")
     print(f"  Testing I(n) = sigma_pair(0) - sigma_pair(n)  [cumulative capacity]")
-    print(f"  burn_in = {args.burn_in}")
+    print(f"  burn_in = {args.burn_in}, rel_tol = {args.rel_tol:g}")
     print(f"{'='*60}\n")
 
     summary_rows = []
@@ -289,22 +314,28 @@ def main():
             print(f"[q={q}] No npz file found in {npz_dir}  (tried {candidates})")
             continue
 
-        print(f"[q={q}] Loading {npz_path.name} ...")
+        import hashlib
+        digest = hashlib.sha256(npz_path.read_bytes()).hexdigest()
+        print(f"[q={q}] Loading {npz_path.name}  sha256={digest}")
         data = load_pair_data(npz_path)
         depths = data["depths"]
         sigma_mean = data["sigma_pair_mean"]
 
         # --- Mean monotonicity test on I_mean(n) ---
-        mono = analyze_mean_monotonicity(sigma_mean, depths, args.burn_in)
+        mono = analyze_mean_monotonicity(sigma_mean, depths, args.burn_in, args.rel_tol)
         print(f"  I_mean(n) = sigma_pair_mean(0) - sigma_pair_mean(n):")
         print(f"    steps after burn-in : {mono['n_steps']}")
         print(f"    decreases           : {mono['n_decreases']}")
         print(f"    max decrease        : {mono['max_decrease']:.3e}")
         print(f"    monotone fraction   : {mono['monotone_fraction']:.4f}")
-        print(f"    strictly monotone   : {mono['is_monotone']}")
+        print(f"    exactly monotone    : {mono['is_monotone']}")
+        print(f"    monotone within tol : {mono['is_tol_monotone']}")
 
         row = {
             "q": q,
+            "npz": npz_path.name,
+            "n_steps": mono["n_steps"],
+            "mean_tol_monotone": mono["is_tol_monotone"],
             "mean_monotone": mono["is_monotone"],
             "mean_mono_frac": mono["monotone_fraction"],
             "mean_n_decreases": mono["n_decreases"],
@@ -314,13 +345,17 @@ def main():
         # --- Per-pair stability test on I(n) ---
         if data["sigma_pair_all"] is not None:
             traces = data["sigma_pair_all"]
-            stab = analyze_stability(traces, depths, args.burn_in)
+            stab = analyze_stability(traces, depths, args.burn_in, args.rel_tol)
             print(f"  Per-pair I(n) stability:")
             print(f"    n_pairs             : {stab['n_pairs']}")
             print(f"    pairs with regression: {stab['n_regressions']} "
                   f"({100*(1 - stab['monotone_fraction']):.1f}% of steps regress)")
             print(f"    monotone fraction   : {stab['monotone_fraction']:.4f}")
-            print(f"    strictly monotone   : {stab['is_monotone']}")
+            print(f"    exactly monotone    : {stab['is_monotone']}")
+            print(f"    max abs decrease    : {stab['max_abs_decrease']:.3e}")
+            print(f"    max rel decrease    : {stab['max_rel_decrease']:.3e} of plateau")
+            print(f"    regressions > tol   : {stab['n_tol_regressions']}")
+            print(f"    monotone frac (tol) : {stab['tol_monotone_fraction']:.4f}")
             if stab["n_regressions"] > 0:
                 print(f"    *** REGRESSIONS in pairs: "
                       f"{stab['regression_pairs'][:10]}"
@@ -330,14 +365,17 @@ def main():
                       f"{stab['n_decreases_per_pair'][worst]} decreases, "
                       f"max drop = {stab['max_decrease_per_pair'][worst]:.3e}")
             else:
-                print(f"    No regressions — I(n) strictly non-decreasing "
-                      f"for all pairs. Stability condition holds.")
+                print(f"    No exact decrease — I(n) non-decreasing "
+                      f"for all pairs.")
 
             row.update({
                 "n_pairs": stab["n_pairs"],
                 "n_regressions": stab["n_regressions"],
                 "pair_mono_frac": stab["monotone_fraction"],
                 "is_monotone": stab["is_monotone"],
+                "n_tol_regressions": stab["n_tol_regressions"],
+                "tol_mono_frac": stab["tol_monotone_fraction"],
+                "max_abs_decrease": stab["max_abs_decrease"],
             })
 
             # Plots — now shows both sigma_pair(n) and I(n)
@@ -365,25 +403,25 @@ def main():
             return v
         return f"{v:.4f}"
 
-    header = (f"{'q':>6}  {'I_mean_mono':>11}  {'I_mean_frac':>11}  "
-              f"{'pairs':>6}  {'regress':>7}  {'pair_frac':>9}  {'mono_all':>8}")
+    header = (f"{'q':>5} {'pairs':>5} {'steps':>5} {'exact_dec_pairs':>15} {'regress_tol':>11} "
+              f"{'frac_exact':>10} {'frac_tol':>8} {'mean_exact':>10} {'mean_tol':>8} {'max_abs_dec':>11}")
     print(header)
     print("-" * len(header))
     for r in summary_rows:
         print(
-            f"{r['q']:>6}  "
-            f"{'YES' if r['mean_monotone'] else 'NO':>11}  "
-            f"{r['mean_mono_frac']:>11.4f}  "
-            f"{str(r.get('n_pairs','n/a')):>6}  "
-            f"{str(r.get('n_regressions','n/a')):>7}  "
-            f"{_fmt(r.get('pair_mono_frac')):>9}  "
-            f"{str(r.get('is_monotone','n/a')):>8}"
+            f"{r['q']:>5} {str(r.get('n_pairs','n/a')):>5} {r['n_steps']:>5} "
+            f"{str(r.get('n_regressions','n/a')):>15} {str(r.get('n_tol_regressions','n/a')):>11} "
+            f"{_fmt(r.get('pair_mono_frac')):>10} {_fmt(r.get('tol_mono_frac')):>8} "
+            f"{'YES' if r['mean_monotone'] else 'NO':>10} {'YES' if r['mean_tol_monotone'] else 'NO':>8} "
+            f"{r.get('max_abs_decrease', float('nan')):>11.2e}"
         )
     print()
     print("Interpretation:")
-    print("  I_mean_mono = YES : mean I(n) = sigma(0)-sigma(n) is non-decreasing — (A) holds")
-    print("  pair_frac = 1.0   : I(n) non-decreasing for all pairs at every step — (C) holds")
-    print("  mono_all = True   : no pair ever regressed — stability condition fully holds")
+    print("  steps            : consecutive-depth differences after burn-in, per pair")
+    print("  exact_dec_pairs  : pairs with at least one exact decrease I(n+1) < I(n)")
+    print("  regress_tol      : pairs with a decrease larger than rel_tol * plateau value")
+    print("  frac_exact / tol : fraction of (pair, step) with no exact / no above-tolerance decrease")
+    print("  mean_exact / tol : pair-averaged I(n) non-decreasing exactly / within tolerance")
     print()
     print(f"Plots saved to: {out_dir}/")
 
