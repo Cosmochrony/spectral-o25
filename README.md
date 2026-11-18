@@ -31,13 +31,15 @@ earlier O14 correction eventually overcorrects.
 - the physically relevant observable is the canonical pair-level quantity  
   $\sigma_{\mathrm{pair}}^{\mathrm{can}}(n)$
 - the reference value $\delta_{\mathrm{pair}} \approx 7.44$ lies within the historical
-  phenomenological window
-  $[7.4, 10.6]$
+  comparison range
+  $[7.4, 10.6]$, which is not a derived condition
 - vertical fibre structure does not change the observable rank (**O24**)
 
 The further map
-$\beta^*=1/(\delta_{\mathrm{pair}}+1/2)$ is not a native Heisenberg law: it imports a
-changing-degree LPS growth equation into the fixed-degree Heisenberg cascade. O25 therefore
+$\beta^*=1/(\delta_{\mathrm{pair}}+1/2)$ is not implied by the changing-degree LPS growth equation,
+which yields, under O6's premises, only the upper bound $\beta_{\mathrm{eff}}\le 1/(\alpha+1/2)$,
+and it has no native carrier in
+the fixed-degree Heisenberg cascade. O25 therefore
 retains values produced by that reciprocal only as phenomenological diagnostics.
 
 However:
@@ -137,8 +139,8 @@ with $\eta = 1/2$ yields:
 
 - $\delta_{\mathrm{corr}}(q) \in [7.7, 9.0]$
 
-This small-$q$ endpoint diagnostic was historically consistent with the phenomenological
-window. The large-$q$ extension shows that it eventually overcorrects, so it is not a native
+This small-$q$ endpoint diagnostic was historically consistent with the comparison range
+$[7.4, 10.6]$, which is not a derived condition. The large-$q$ extension shows that it eventually overcorrects, so it is not a native
 exponent conversion and does not establish that the drift is purely a normalization artefact.
 
 ### 6. Candidate asymptotic variable
@@ -307,10 +309,37 @@ The programme is now:
 - free of extrapolation artefacts
 - ready for analytical completion
 
+## Reproduction of the extended-campaign figure
+
+The original generator of `o25_scaling_extended.pdf` (Figure "Extended campaign") was not recovered.
+`code/o25_scaling_extended_reconstruct.py` is an independent reconstruction written from the preserved
+checkpoints; it is not the original code. Its inputs are committed in `code/data/extended/` with SHA-256
+digests (`SHA256SUMS`) and provenance (`PROVENANCE.md`). The script verifies the input digests, recomputes
+every value of the figure and of the extended-campaign table, checks 31 of them against the published values
+with explicit tolerances (half a unit of the last printed digit), and fails otherwise.
+The historical label "8.09" at $q = 401$ was a double rounding of the tabulated 8.085; the unrounded value
+8.0848 is now rounded once, to 8.08. No data changed.
+
+From an independent clone:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r code/requirements-figure.txt
+PYTHON_BIN=.venv/bin/python bash build.sh
+```
+
+`build.sh` regenerates `code/o25_scaling_extended.pdf`, verifies it against `code/ARTIFACT_SHA256SUMS`, and
+compiles the paper. The exact versions (Python 3.14.5, NumPy 2.4.0, Matplotlib 3.10.8) are needed for the
+byte-identical figure; the open ranges of `code/requirements.txt` reproduce the numbers. The other figure PDFs
+in `code/` are legacy committed artefacts whose inputs are not distributed with this repository.
+
 ## Repository Structure
 
 ```text
 paper/
+├── build.sh  # Regenerates the extended figure, verifies it, compiles
+├── code/     # Pipelines, analysis scripts, reconstructed generator, data/extended/
 ├── out/      # Compiled O25 PDF
 ├── tex/      # LaTeX sources
 └── README.md
