@@ -4,9 +4,9 @@ Provenance
 ----------
 The original generator of the extended-campaign figure (created 3 July 2026, first committed in 00ad91e)
 was not recovered. This script is an independent reconstruction written on 18 November 2026 from the
-preserved checkpoints. It is not the original code. It reproduces every published value of the figure and
-of the extended-campaign table to their printed precision; the historical label "8.09" at q = 401 was a
-double rounding of the tabulated 8.085, the unrounded value being 8.0848.
+preserved checkpoints. It is not the original code. The numerical fields are recomputed from unrounded
+inputs. Version 1.6 corrects four last-digit display errors by rounding once: 8.09 -> 8.08 (figure),
+0.117 -> 0.116 (q=401 reciprocal), 8.586 -> 8.585 (q=101 corrected slope), and 7.771 -> 7.770 (q=211).
 
 Inputs (all in data/extended/, checksums in data/extended/SHA256SUMS, provenance in PROVENANCE.md):
   q{29,61,101,151,211}_o25.npz   full-graph production checkpoints, M = 50 samples per pair
@@ -45,11 +45,9 @@ VALUES = HERE / "o25_scaling_extended_values.json"
 Q_PROD = (29, 61, 101, 151, 211)
 Q_CAPPED = (307, 401, 601)
 
-# Published values of SpectralO25 v1.5, with explicit tolerances.
-# A value printed with k decimals gets tolerance 0.5e-k.  The O14-correction table prints delta_corr as the
-# difference of two already rounded columns (mean and eta log q / log n1), so its delta_corr tolerance is the
-# sum of their two rounding tolerances, 1e-3; the two columns are also checked on their own at 5e-4.
-# q = 29 has no printed delta_corr (it is only plotted); it is checked on the figure, not here.
+# Version 1.6 display values, compared with unrounded calculations.
+# Every k-decimal entry has tolerance half a unit of its last displayed digit, 0.5e-k.
+# q=29 has no printed corrected-slope entry.
 EXPECTED = {
     # figure labels (q <= 151) and Table "Extended campaign" (q >= 211)
     "delta_global": {29: (12.51, 5e-3), 61: (11.49, 5e-3), 101: (10.70, 5e-3), 151: (9.53, 5e-3),
@@ -59,8 +57,9 @@ EXPECTED = {
                    307: (8.261, 5e-4), 401: (8.090, 5e-4), 601: (7.618, 5e-4)},
     "correction": {61: (0.988, 5e-4), 101: (0.962, 5e-4), 151: (0.978, 5e-4), 211: (1.014, 5e-4)},
     # O14-correction table (q = 61..211, 3 decimals) and Table "Extended campaign" (q >= 307, 2 decimals)
-    "delta_corr": {61: (8.995, 1e-3), 101: (8.586, 1e-3), 151: (8.147, 1e-3), 211: (7.771, 1e-3),
+    "delta_corr": {61: (8.995, 5e-4), 101: (8.585, 5e-4), 151: (8.147, 5e-4), 211: (7.770, 5e-4),
                    307: (7.23, 5e-3), 401: (7.03, 5e-3), 601: (6.53, 5e-3)},
+    "reciprocal": {211: (0.108, 5e-4), 307: (0.114, 5e-4), 401: (0.116, 5e-4), 601: (0.123, 5e-4)},
     "window": {307: (3, 16), 401: (4, 17), 601: (4, 19)},
     # figure legend, one decimal
     "delta_inf": {"sqrt": (5.4, 5e-2), "inv": (7.1, 5e-2)},
@@ -101,6 +100,7 @@ def compute():
                          source=f"capped BFS, M={int(z['M'])}"))
     for r in rows:
         r["correction"] = 0.5 * np.log(r["q"]) / np.log(r["n1"])
+        r["reciprocal"] = 1.0 / (r["delta_global"] + 0.5)
         r["delta_corr"] = r["delta_mean"] - r["correction"]
     q = np.array([r["q"] for r in rows], float)
     dg = np.array([r["delta_global"] for r in rows])
@@ -115,7 +115,7 @@ def compute():
 def check(rows, fits):
     failures = []
     by_q = {r["q"]: r for r in rows}
-    for key in ("delta_global", "delta_mean", "correction", "delta_corr"):
+    for key in ("delta_global", "delta_mean", "correction", "delta_corr", "reciprocal"):
         for q, (ref, tol) in EXPECTED[key].items():
             if abs(by_q[q][key] - ref) > tol:
                 failures.append(f"{key}(q={q}) = {by_q[q][key]:.6f}, expected {ref} +/- {tol}")
@@ -137,7 +137,7 @@ def plot(rows, fits):
     ax.axhspan(7.4, 10.6, color="green", alpha=0.10,
                label=r"historical comparison range $[7.4,\,10.6]$ (not derived)")
     ax.axhline(7.44, color="green", ls="--", lw=1.5,
-               label=r"O24 value $\delta_{\mathrm{pair}}\approx 7.44$ (historical comparison)")
+               label=r"historical reference $\delta_{\mathrm{pair}}\approx 7.44$ (historical comparison)")
     qq = np.linspace(101, 650, 300)
     for name, col, lab in (("sqrt", "tab:blue", r"$1/\sqrt{q}$ fit ($\delta_\infty$ = %.1f)"),
                            ("inv", "indigo", r"$1/q$ fit ($\delta_\infty$ = %.1f)")):

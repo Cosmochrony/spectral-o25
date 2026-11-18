@@ -315,10 +315,11 @@ The original generator of `o25_scaling_extended.pdf` (Figure "Extended campaign"
 `code/o25_scaling_extended_reconstruct.py` is an independent reconstruction written from the preserved
 checkpoints; it is not the original code. Its inputs are committed in `code/data/extended/` with SHA-256
 digests (`SHA256SUMS`) and provenance (`PROVENANCE.md`). The script verifies the input digests, recomputes
-every value of the figure and of the extended-campaign table, checks 31 of them against the published values
-with explicit tolerances (half a unit of the last printed digit), and fails otherwise.
-The historical label "8.09" at $q = 401$ was a double rounding of the tabulated 8.085; the unrounded value
-8.0848 is now rounded once, to 8.08. No data changed.
+the numerical fields from unrounded checkpoints and checks 35 displayed exponent, correction,
+reciprocal, window and fit values with half a unit of the last displayed digit as the tolerance.
+Four last-digit errors are corrected by rounding once: 8.09 → 8.08 (q=401 figure label),
+0.117 → 0.116 (q=401 reciprocal), 8.586 → 8.585 (q=101 corrected slope),
+and 7.771 → 7.770 (q=211 corrected slope). No input data changed.
 
 From an independent clone:
 
@@ -329,10 +330,14 @@ pip install -r code/requirements-figure.txt
 PYTHON_BIN=.venv/bin/python bash build.sh
 ```
 
-`build.sh` regenerates `code/o25_scaling_extended.pdf`, verifies it against `code/ARTIFACT_SHA256SUMS`, and
+`build.sh` regenerates all five embedded figure PDFs, verifies it against `code/ARTIFACT_SHA256SUMS`, and
 compiles the paper. The exact versions (Python 3.14.5, NumPy 2.4.0, Matplotlib 3.10.8) are needed for the
-byte-identical figure; the open ranges of `code/requirements.txt` reproduce the numbers. The other figure PDFs
-in `code/` are legacy committed artefacts whose inputs are not distributed with this repository.
+byte-identical figures. The open ranges of `code/requirements.txt` reproduce the numbers.
+Figures 1–3 use the shipped M=50 production data. The separate legacy scaling plot uses the recovered
+M=20 field exports in `code/data/legacy-m20/`, with checksums, provenance and `export_legacy_m20.py`.
+Before relabelling, the original scaling script on these recovered fields reproduced the published
+figure with identical text and zero differing pixels at 100 dpi. All target/prediction labels are now
+historical comparisons in the generating scripts and regenerated images.
 
 ## Repository Structure
 

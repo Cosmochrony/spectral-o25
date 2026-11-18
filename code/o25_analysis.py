@@ -15,7 +15,7 @@ Figure 2 — Inter-pair delta_pair distribution
 Figure 3 — Convergence and normalization correction
     Left:  raw dpairmean(q) vs q with empirical fits (1/log q, 1/(log q)^2)
     Right: dpairmean(q) and delta_corr(q) = dpairmean - eta*log(q)/log(n1)
-           both plotted vs q, with admissible window [7.4, 10.6] shaded.
+           both plotted vs q, with historical comparison range [7.4, 10.6] shaded.
 
 USAGE
 -----
@@ -186,7 +186,7 @@ def figure2_distribution(data, out_dir):
 
     axes[0].set_ylabel(r"$\delta_{\rm pair}$ per conjugate pair", fontsize=9)
     axes[0].text(0.01, (TARGET_LO + TARGET_HI) / 2,
-                 r"target $[7.4,\,10.6]$",
+                 r"historical comparison range $[7.4,\,10.6]$",
                  transform=axes[0].get_yaxis_transform(),
                  va="center", ha="left", fontsize=7.5,
                  color="green", alpha=0.8)
@@ -208,7 +208,7 @@ def figure2_distribution(data, out_dir):
 def figure3_convergence(data, out_dir):
     """
     Left:  raw dpairmean(q) with empirical fits 1/log(q) and 1/(log(q))^2.
-    Right: raw vs O14-corrected dpairmean(q), admissible window shaded.
+    Right: raw vs O14-corrected dpairmean(q), historical comparison range shaded.
     """
     qs_avail   = sorted([q for q in PRIMES if q in data])
     if not qs_avail:
@@ -265,7 +265,7 @@ def figure3_convergence(data, out_dir):
         pass
 
     ax1.axhspan(TARGET_LO, TARGET_HI, alpha=0.10, color="green",
-                label=r"target $[7.4,\,10.6]$")
+                label=r"historical comparison range $[7.4,\,10.6]$")
     ax1.axhline(TARGET_LO, color="green", ls="--", lw=1.0, alpha=0.7)
     ax1.axhline(TARGET_HI, color="green", ls="--", lw=1.0, alpha=0.7)
     ax1.set_xlabel(r"prime $q$", fontsize=10)
@@ -296,7 +296,7 @@ def figure3_convergence(data, out_dir):
                       r" - \eta\,\frac{\log q}{\log n_1}$"),
     ]
     ax2.axhspan(TARGET_LO, TARGET_HI, alpha=0.10, color="green",
-                label=r"target $[7.4,\,10.6]$")
+                label=r"historical comparison range $[7.4,\,10.6]$")
     ax2.axhline(TARGET_LO, color="green", ls="--", lw=1.0, alpha=0.7)
     ax2.axhline(TARGET_HI, color="green", ls="--", lw=1.0, alpha=0.7)
     ax2.set_xlabel(r"prime $q$", fontsize=10)
@@ -304,7 +304,7 @@ def figure3_convergence(data, out_dir):
     ax2.set_title(r"(B) Raw vs O14-corrected ($\eta = 1/2$)", fontsize=10)
     ax2.legend(handles=proxies + [
         matplotlib.patches.Patch(alpha=0.10, color="green",
-                                 label=r"target $[7.4,\,10.6]$")],
+                                 label=r"historical comparison range $[7.4,\,10.6]$")],
                fontsize=8, loc="upper right")
     ax2.grid(True, alpha=0.3)
     ax2.set_xlim(20, 225)

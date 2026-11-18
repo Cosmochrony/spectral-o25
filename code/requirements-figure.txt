@@ -1,4 +1,13 @@
-# Exact versions used to generate the deposited o25_scaling_extended.pdf and its checksum.
-# Python 3.14.5. The open ranges in requirements.txt reproduce the numbers, not the page geometry.
-numpy==2.4.0
+# Complete environment used for deterministic figure generation. Python 3.14.5.
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.68.0
+kiwisolver==1.5.1
 matplotlib==3.10.8
+numpy==2.4.0
+packaging==26.3
+pillow==13.0.0
+pyparsing==3.3.3
+python-dateutil==4.0.0
+scipy==1.16.3
+tzdata==2026.6

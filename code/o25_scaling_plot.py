@@ -9,8 +9,8 @@ then plots:
   - delta_mean (mean over pairs and blocks) with error bars
   - delta_global (OLS fit on mean trajectory)
   - fit delta_mean ~ delta_inf + C/sqrt(q) with extrapolated limit
-  - theoretical window [7.4, 10.6] from O10
-  - prediction delta_pair ~ 7.44 from O24
+  - historical comparison range [7.4, 10.6]
+  - historical reference delta_pair ~ 7.44
 
 USAGE
 -----
@@ -134,11 +134,11 @@ def make_plot(records, out_path):
 
     fig, ax = plt.subplots(figsize=(7.5, 4.8))
 
-    # Theoretical band
+    # Historical comparison band
     ax.axhspan(O10_lo, O10_hi, color="green", alpha=0.10,
-               label=r"O10 window $[7.4,\,10.6]$")
+               label=r"historical comparison range $[7.4,\,10.6]$")
     ax.axhline(O24_pred, color="green", lw=1.2, ls="--",
-               label=fr"O24 prediction $\delta_{{\mathrm{{pair}}}} \approx {O24_pred}$")
+               label=fr"historical reference $\delta_{{\mathrm{{pair}}}} \approx {O24_pred}$")
 
     # Fit on delta_global
     if y_fit_g is not None:
@@ -222,7 +222,7 @@ def make_plot(records, out_path):
     if inf_g is not None:
         print(f"\nFit delta_global ~ {inf_g:.3f} + {C_g:.2f}/sqrt(q)")
         print(f"  Extrapolated limit:        {inf_g:.3f}")
-        print(f"  O24 prediction:            {O24_pred}")
+        print(f"  Historical reference:            {O24_pred}")
         print(f"  Gap:                      {inf_g - O24_pred:+.3f}")
     if inf_m is not None:
         print(f"\nFit delta_mean   ~ {inf_m:.3f} + {C_m:.2f}/sqrt(q)")

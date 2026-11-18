@@ -23,3 +23,7 @@ media/
 code/o25_scaling_extended.pdf
 code/o25_scaling_extended_values.json
 .matplotlib-cache/
+
+# Local figure-generation scratch directories
+.build-figures/
+.cache/
