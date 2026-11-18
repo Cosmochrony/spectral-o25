@@ -14,6 +14,6 @@ for figure in o25_fig1_sigma_pair o25_fig2_distribution o25_fig3_convergence; do
   cp "$BUILD_DIR/$figure.pdf" "code/$figure.pdf"
 done
 "$PYTHON_BIN" code/o25_scaling_plot.py --dir code/data/legacy-m20 --out code/o25_scaling.pdf
-(cd code && "$PYTHON_BIN" o25_scaling_extended_reconstruct.py)
+"$PYTHON_BIN" code/o25_scaling_extended_reconstruct.py
 (cd code && shasum -a 256 -c ARTIFACT_SHA256SUMS)
 bash compile.sh
