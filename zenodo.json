@@ -4,5 +4,5 @@
   "main_tex": "tex/SpectralO25.tex",
   "zenodo_id": 19462132,
   "doi": "10.5281/zenodo.19462132",
-  "notes": "Version 1.6.1. The bibliography entry for O22 carries its version-1.19 title, 'Projection Locking of the Saturation Depth: A Discrete Admissibility Theorem under Born-Infeld Saturation' (formerly 'Shell-Alignment from Projection Locking'). No other change."
+  "notes": "Version 1.6.2. Section 1.1 describes the pair observable as uncorrected, not as O19's canonical normalisation, whose tests are open. The bibliography entry for O19 carries its version-1.3 title, 'Canonical Pair Observables in Weil Blocks: The Residual Amplitude Factor and a Proposed Canonical Normalisation with Open Tests'. No other change."
 }
