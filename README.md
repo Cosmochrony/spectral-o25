@@ -29,7 +29,7 @@ earlier O14 correction eventually overcorrects.
 **O16–O24** provide:
 
 - the pair-level observable $\sigma_c(n)\,\sigma_{q-c}(n)$, uncorrected (the canonical normalisation
-  proposed in **O19** has open tests)
+  proposed in **O19** is not established as pipeline independent)
 - the reference value $\delta_{\mathrm{pair}} \approx 7.44$ lies within the historical
   comparison range
   $[7.4, 10.6]$, which is not a derived condition
@@ -239,7 +239,7 @@ The key insight is:
 **O25** completes the sequence:
 
 - **O16**: pair observable
-- **O17–O19**: conjugation identity (O17); normalization proposed with open tests (O19); fibre identification open (O18)
+- **O17–O19**: conjugation identity (O17); normalization proposed, not established as pipeline independent (O19); fibre identification open (O18)
 - **O20–O21**: persistence and intrinsic saturation
 - **O22**: projection locking
 - **O23**: conditional threshold dimension (supplied carrier)
