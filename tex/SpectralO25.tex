@@ -65,7 +65,7 @@
   \author{J\'er\^ome Beau\\[2pt]
   \small Independent Researcher\\
   \small \href{mailto:jerome.beau@cosmochrony.org}{jerome.beau@cosmochrony.org}}
-  \date{2026\\[2pt]\small Version 1.6.2}
+  \date{2026\\[2pt]\small Version 1.7}
   \maketitle
 
   \begin{abstract}
@@ -84,8 +84,9 @@
     breadth-first construction that reproduces the pair observable exactly at a fraction of the
     cost (with reduced sampling: $M = 16$ at $q = 307$, $M = 8$ at $q = 401, 601$).
     Three results are established.
-    First, $\dpair(q)$ is extracted reproducibly and concentrates across pairs, confirming that it is a
-    stable fixed-$q$ pair statistic rather than a block-level fluctuation.
+    First, $\dpair(q)$ is extracted reproducibly and concentrates across pairs: at each computed $q$ it
+    behaves as a stable fixed-$q$ pair statistic; this does not establish that it is independent of
+    $q$ or a structural invariant of the representation.
     Second, and centrally, the extended campaign shows that the \emph{raw} exponent
     $\delta_{\mathrm{global}}(q)$ descends monotonically into the historical comparison range
     $[7.4, 10.6]$ on its own, reaching $7.61$ at $q = 601$, without any finite-size correction; the
@@ -267,6 +268,7 @@
       \end{table}
 
     \subsection{Inter-pair concentration}
+      \label{ssec:concentration}
 
       The inter-pair standard deviation decreases monotonically:
       $\sigma_q \in \{0.539, 0.259, 0.161, 0.139, 0.109\}$ for
@@ -578,8 +580,10 @@
         At $q = 211$, the coefficient of variation is $1.2\%$ over 105 pairs with $M = 50$
         samples each.
         The decrease of $\sigma_q$ is strictly monotone across all five primes with no
-        sign of a plateau, strengthening the evidence that $\dpair$ is a structural
-        invariant of the Weil representation.
+        sign of a plateau.
+        This supports a stable fixed-$q$ pair statistic; it does not establish that $\dpair$
+        is independent of $q$ or a structural invariant of the Weil representation
+        (Section~\ref{ssec:concentration}).
         This is compatible with the rank-stability result of O24~\cite{Beau2026a28}.
 
         \item \textbf{Structural non-identifiability of $\delta_\infty$ by extrapolation.}
