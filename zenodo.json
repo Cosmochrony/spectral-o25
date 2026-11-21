@@ -4,5 +4,5 @@
   "main_tex": "tex/SpectralO25.tex",
   "zenodo_id": 19462132,
   "doi": "10.5281/zenodo.19462132",
-  "notes": "Version 1.6 (alpha-2). Requalifies [7.4, 10.6] as a historical comparison range in prose and all embedded figures. O6 supplies only its conditional upper bound and a countermodel to reciprocal equality. All five figures are reproducible from shipped checkpoints, including recovered compact M=20 inputs. The extended-figure generator is an independent reconstruction, not the original. Half-last-digit checks cover 35 displayed values, including the reciprocal column. Single rounding corrects 8.09 to 8.08 (q=401 figure), 0.117 to 0.116 (q=401 reciprocal), 8.586 to 8.585 (q=101 corrected slope) and 7.771 to 7.770 (q=211 corrected slope). No input data changed."
+  "notes": "Version 1.6.1. The bibliography entry for O22 carries its version-1.19 title, 'Projection Locking of the Saturation Depth: A Discrete Admissibility Theorem under Born-Infeld Saturation' (formerly 'Shell-Alignment from Projection Locking'). No other change."
 }
